@@ -42,7 +42,14 @@ class _AssignmentResultScreenState extends State<AssignmentResultScreen> {
                     children: [
                       _ScoreRing(percent: 0.92),
                       SizedBox(height: 10),
-                      StatusBadge(label: 'ممتاز', fg: AppColors.success, bg: AppColors.successBg),
+                      StatusBadge(
+                        label: 'ممتاز',
+                        fg: AppColors.success,
+                        bg: AppColors.successBg,
+                        fontSize: 11,
+                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        radius: 9,
+                      ),
                     ],
                   ),
                 ),

@@ -15,7 +15,7 @@ class AchievementsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.screenBg,
-      appBar: AppBar(title: Text('الإنجازات', style: tj(16, weight: FontWeight.w700, color: AppColors.textHeading))),
+      appBar: AppBar(title: Text('الإنجازات', style: tj(20, weight: FontWeight.w800, color: AppColors.textHeading))),
       body: SectionState(
         section: DemoSection.achievements,
         loading: (context) => const _AchievementsLoading(),

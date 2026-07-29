@@ -150,14 +150,16 @@ class _AssignmentCard extends StatelessWidget {
     );
   }
 
+  static const _badgePadding = EdgeInsets.symmetric(horizontal: 7, vertical: 4);
+
   Widget _badge() {
     if (assignment.status == AssignmentStatus.late) {
-      return const StatusBadge(label: 'متأخر', fg: AppColors.coral, bg: AppColors.dangerBg);
+      return const StatusBadge(label: 'متأخر', fg: AppColors.coral, bg: AppColors.dangerBg, padding: _badgePadding, radius: 6);
     }
     if (assignment.timerLabel != null) {
-      return StatusBadge(label: assignment.timerLabel!, fg: AppColors.coral, bg: AppColors.dangerBg);
+      return StatusBadge(label: assignment.timerLabel!, fg: AppColors.coral, bg: AppColors.dangerBg, padding: _badgePadding, radius: 6);
     }
-    return const StatusBadge(label: 'مفتوح', fg: AppColors.textMuted, bg: AppColors.inputFill);
+    return const StatusBadge(label: 'مفتوح', fg: AppColors.textMuted, bg: AppColors.inputFill, padding: _badgePadding, radius: 6);
   }
 }
 

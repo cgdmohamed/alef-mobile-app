@@ -65,7 +65,14 @@ class ReportDetailScreen extends StatelessWidget {
                     Column(
                       children: [
                         for (final s in MockData.skillScores) ...[
-                          LabeledProgress(label: s.label, percent: s.percent, color: s.color),
+                          LabeledProgress(
+                            label: s.label,
+                            percent: s.percent,
+                            color: s.color,
+                            labelSize: 9,
+                            trackHeight: 6,
+                            gap: 2,
+                          ),
                           if (s != MockData.skillScores.last) const SizedBox(height: 7),
                         ],
                       ],

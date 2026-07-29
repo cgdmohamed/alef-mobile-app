@@ -92,6 +92,8 @@ class _MeetingsListScreenState extends State<MeetingsListScreen> {
                         child: PillChip(
                           label: 'قائمة',
                           active: !_calendarView,
+                          fontSize: 10,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                           icon: AppIcon(IconBodies.list, size: 12, color: !_calendarView ? Colors.white : AppColors.primary, strokeWidth: 1.8),
                         ),
                       ),

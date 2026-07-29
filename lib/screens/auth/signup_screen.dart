@@ -68,13 +68,20 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-              AuthTextField(label: 'اسم الطالب الثلاثي', controller: _studentName),
+              AuthTextField(label: 'اسم الطالب الثلاثي', controller: _studentName, labelSize: 11, valueSize: 13, radius: 11),
               const SizedBox(height: 12),
               AuthSelectField(label: 'المرحلة الدراسية', value: _stage, onTap: _pickStage),
               const SizedBox(height: 12),
-              AuthTextField(label: 'اسم ولي الأمر', controller: _parentName),
+              AuthTextField(label: 'اسم ولي الأمر', controller: _parentName, labelSize: 11, valueSize: 13, radius: 11),
               const SizedBox(height: 12),
-              AuthTextField(label: 'بريد ولي الأمر', controller: _parentEmail, keyboardType: TextInputType.emailAddress),
+              AuthTextField(
+                label: 'بريد ولي الأمر',
+                controller: _parentEmail,
+                keyboardType: TextInputType.emailAddress,
+                labelSize: 11,
+                valueSize: 13,
+                radius: 11,
+              ),
               const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(

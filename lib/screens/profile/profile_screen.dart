@@ -55,16 +55,16 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: StatTile(value: '5', label: 'المستوى', valueColor: AppColors.primary, valueSize: 15)),
+                      Expanded(child: StatTile(value: '5', label: 'المستوى', valueColor: AppColors.primary, valueSize: 15, labelSize: 9)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: GestureDetector(
                           onTap: () => context.push('/achievements'),
-                          child: StatTile(value: '12', label: 'شارة', valueColor: AppColors.warning, valueSize: 15),
+                          child: StatTile(value: '12', label: 'شارة', valueColor: AppColors.warning, valueSize: 15, labelSize: 9),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Expanded(child: StatTile(value: '96%', label: 'الحضور', valueColor: AppColors.sky, valueSize: 15)),
+                      Expanded(child: StatTile(value: '96%', label: 'الحضور', valueColor: AppColors.sky, valueSize: 15, labelSize: 9)),
                     ],
                   ),
                   const SizedBox(height: 12),

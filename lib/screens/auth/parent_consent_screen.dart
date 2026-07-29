@@ -139,6 +139,7 @@ class _ParentConsentScreenState extends State<ParentConsentScreen> {
               OutlineButton(
                 label: 'تنزيل نسخة PDF',
                 color: AppColors.textMuted,
+                fontSize: 13,
                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تنزيل نسخة PDF'))),
               ),
             ],

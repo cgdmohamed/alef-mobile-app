@@ -100,8 +100,18 @@ class PillChip extends StatelessWidget {
   final bool active;
   final VoidCallback? onTap;
   final Widget? icon;
+  final double fontSize;
+  final EdgeInsets padding;
 
-  const PillChip({super.key, required this.label, this.active = false, this.onTap, this.icon});
+  const PillChip({
+    super.key,
+    required this.label,
+    this.active = false,
+    this.onTap,
+    this.icon,
+    this.fontSize = 11,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +121,7 @@ class PillChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: padding,
           decoration: BoxDecoration(
             color: active ? AppColors.primary : AppColors.inputFill,
             borderRadius: BorderRadius.circular(9),
@@ -122,7 +132,7 @@ class PillChip extends StatelessWidget {
               if (icon != null) ...[icon!, const SizedBox(width: 4)],
               Text(
                 label,
-                style: tj(11, weight: FontWeight.w600, color: active ? Colors.white : AppColors.textMuted),
+                style: tj(fontSize, weight: FontWeight.w600, color: active ? Colors.white : AppColors.textMuted),
               ),
             ],
           ),

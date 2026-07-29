@@ -139,7 +139,7 @@ class _SupportScreenState extends State<SupportScreen> {
                         controller: _input,
                         textAlign: TextAlign.right,
                         onSubmitted: _send,
-                        style: tj(12, color: AppColors.textBody),
+                        style: tj(11, color: AppColors.textBody),
                         decoration: const InputDecoration(border: InputBorder.none, isDense: true, hintText: 'اكتب رسالتك...'),
                       ),
                     ),

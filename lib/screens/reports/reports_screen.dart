@@ -29,11 +29,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
             const SizedBox(height: 12),
             Row(
               children: const [
-                Expanded(child: StatTile(value: '91%', label: 'متوسط الأداء', valueColor: AppColors.primary, valueSize: 16)),
+                Expanded(child: StatTile(value: '91%', label: 'متوسط الأداء', valueColor: AppColors.primary, valueSize: 16, labelSize: 9)),
                 SizedBox(width: 8),
-                Expanded(child: StatTile(value: '96%', label: 'الحضور', valueColor: AppColors.sky, valueSize: 16)),
+                Expanded(child: StatTile(value: '96%', label: 'الحضور', valueColor: AppColors.sky, valueSize: 16, labelSize: 9)),
                 SizedBox(width: 8),
-                Expanded(child: StatTile(value: '12', label: 'الإنجازات', valueColor: AppColors.warning, valueSize: 16)),
+                Expanded(child: StatTile(value: '12', label: 'الإنجازات', valueColor: AppColors.warning, valueSize: 16, labelSize: 9)),
               ],
             ),
             const SizedBox(height: 12),
@@ -100,7 +100,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         height: 36,
                         decoration: BoxDecoration(color: AppColors.dangerBg, borderRadius: BorderRadius.circular(9)),
                         alignment: Alignment.center,
-                        child: Text('PDF', style: tj(9, color: AppColors.coral)),
+                        child: Text('PDF', style: tj(14, color: AppColors.coral)),
                       ),
                       const SizedBox(width: 10),
                       Expanded(

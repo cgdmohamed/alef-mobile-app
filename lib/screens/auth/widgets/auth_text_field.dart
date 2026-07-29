@@ -9,6 +9,9 @@ class AuthTextField extends StatelessWidget {
   final bool obscure;
   final Widget? trailing;
   final TextInputType? keyboardType;
+  final double labelSize;
+  final double valueSize;
+  final double radius;
 
   const AuthTextField({
     super.key,
@@ -17,6 +20,9 @@ class AuthTextField extends StatelessWidget {
     this.obscure = false,
     this.trailing,
     this.keyboardType,
+    this.labelSize = 12,
+    this.valueSize = 14,
+    this.radius = 12,
   });
 
   @override
@@ -24,13 +30,13 @@ class AuthTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: tj(12, weight: FontWeight.w500, color: AppColors.textLabel)),
+        Text(label, style: tj(labelSize, weight: FontWeight.w500, color: AppColors.textLabel)),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
             color: AppColors.inputFill,
             border: Border.all(color: AppColors.border),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(radius),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
@@ -41,7 +47,7 @@ class AuthTextField extends StatelessWidget {
                   obscureText: obscure,
                   keyboardType: keyboardType,
                   textAlign: TextAlign.right,
-                  style: tj(14, color: AppColors.textBody),
+                  style: tj(valueSize, color: AppColors.textBody),
                   decoration: const InputDecoration(border: InputBorder.none, isDense: true),
                 ),
               ),

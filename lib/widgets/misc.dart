@@ -39,6 +39,7 @@ class StatTile extends StatelessWidget {
   final String label;
   final Color valueColor;
   final double valueSize;
+  final double labelSize;
 
   const StatTile({
     super.key,
@@ -46,6 +47,7 @@ class StatTile extends StatelessWidget {
     required this.label,
     required this.valueColor,
     this.valueSize = 18,
+    this.labelSize = 10,
   });
 
   @override
@@ -58,7 +60,7 @@ class StatTile extends StatelessWidget {
         children: [
           Text(value, style: tj(valueSize, weight: FontWeight.w800, color: valueColor)),
           const SizedBox(height: 2),
-          Text(label, style: tj(10, color: AppColors.textFaint), textAlign: TextAlign.center),
+          Text(label, style: tj(labelSize, color: AppColors.textFaint), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -109,8 +111,19 @@ class LabeledProgress extends StatelessWidget {
   final String label;
   final int percent;
   final Color color;
+  final double labelSize;
+  final double trackHeight;
+  final double gap;
 
-  const LabeledProgress({super.key, required this.label, required this.percent, required this.color});
+  const LabeledProgress({
+    super.key,
+    required this.label,
+    required this.percent,
+    required this.color,
+    this.labelSize = 10,
+    this.trackHeight = 5,
+    this.gap = 3,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -118,16 +131,16 @@ class LabeledProgress extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 3),
+          padding: EdgeInsets.only(bottom: gap),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: tj(10, color: AppColors.textMuted)),
-              Text('$percent%', style: tj(10, color: AppColors.textMuted)),
+              Text(label, style: tj(labelSize, color: AppColors.textMuted)),
+              Text('$percent%', style: tj(labelSize, color: AppColors.textMuted)),
             ],
           ),
         ),
-        ProgressTrack(value: percent / 100, color: color),
+        ProgressTrack(value: percent / 100, color: color, height: trackHeight),
       ],
     );
   }
@@ -138,14 +151,26 @@ class StatusBadge extends StatelessWidget {
   final String label;
   final Color fg;
   final Color bg;
-  const StatusBadge({super.key, required this.label, required this.fg, required this.bg});
+  final double fontSize;
+  final EdgeInsets padding;
+  final double radius;
+
+  const StatusBadge({
+    super.key,
+    required this.label,
+    required this.fg,
+    required this.bg,
+    this.fontSize = 9,
+    this.padding = const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    this.radius = 7,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(7)),
-      child: Text(label, style: tj(9, weight: FontWeight.w700, color: fg)),
+      padding: padding,
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(radius)),
+      child: Text(label, style: tj(fontSize, weight: FontWeight.w700, color: fg)),
     );
   }
 }
