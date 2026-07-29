@@ -23,7 +23,7 @@ class ParentHomeScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
               child: Row(
                 children: [
-                  const AvatarPlaceholder(size: 42, color: AppColors.primaryLight),
+                  const AvatarPlaceholder(size: 42, photoAsset: 'assets/avatars/lama.png'),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(

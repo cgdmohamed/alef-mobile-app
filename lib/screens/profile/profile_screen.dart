@@ -39,7 +39,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   Column(
                     children: [
-                      const AvatarPlaceholder(size: 84, color: AppColors.primaryLight),
+                      const AvatarPlaceholder(size: 84, photoAsset: 'assets/avatars/lama.png'),
                       const SizedBox(height: 10),
                       Text('لمى عبدالله الحربي', style: tj(17, weight: FontWeight.w800, color: Colors.white)),
                       Text('طالبة — الصف السادس ابتدائي', style: tj(12, color: const Color(0xFFDEDCF9))),

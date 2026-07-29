@@ -42,6 +42,7 @@ class Assignment {
   final double progress;
   final String ctaLabel;
   final String? timerLabel;
+  final String dueLabel;
 
   Assignment({
     required this.id,
@@ -52,6 +53,7 @@ class Assignment {
     this.progress = 0,
     required this.ctaLabel,
     this.timerLabel,
+    required this.dueLabel,
   });
 }
 

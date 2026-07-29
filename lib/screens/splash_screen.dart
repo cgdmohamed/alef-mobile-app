@@ -35,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   height: 104,
                 ),
                 const SizedBox(height: 22),
-                Text('منصة ألف', style: tj(30, weight: FontWeight.w900, color: Colors.white)),
+                Text('ألف المستقبل', style: tj(30, weight: FontWeight.w900, color: Colors.white)),
                 const SizedBox(height: 6),
                 Text('للموهوبين والمتميزين', style: tj(15, color: const Color(0xFFB9B8E8))),
                 const SizedBox(height: 18),

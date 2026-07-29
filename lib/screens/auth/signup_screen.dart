@@ -64,7 +64,12 @@ class _SignupScreenState extends State<SignupScreen> {
                 children: [
                   const BackChevron(),
                   const SizedBox(width: 4),
-                  Text('انضم إلى منصة ألف', style: tj(22, weight: FontWeight.w800, color: AppColors.textHeading)),
+                  Expanded(
+                    child: Text(
+                      'انضم إلى ألف المستقبل',
+                      style: tj(22, weight: FontWeight.w800, color: AppColors.textHeading),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),

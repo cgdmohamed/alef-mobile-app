@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
+import 'app_icon.dart';
 
 /// White rounded card — the base surface reused across nearly every screen.
 class AppCard extends StatelessWidget {
@@ -224,19 +225,35 @@ class _SkeletonState extends State<Skeleton> with SingleTickerProviderStateMixin
   }
 }
 
-/// Circle-badge "avatar" placeholder — stands in for `<image-slot>` /
-/// unfilled photo slots in the source design (flat brand-tint circle).
+/// Circular user avatar — stands in for `<image-slot>` / unfilled photo
+/// slots in the source design. Pass [photoAsset] for the app's own user
+/// (لمى) to show her real photo; every other person (teachers, other
+/// students, support agents) falls back to a tinted circle with a generic
+/// person glyph rather than a flat empty color swatch.
 class AvatarPlaceholder extends StatelessWidget {
   final double size;
   final Color color;
-  const AvatarPlaceholder({super.key, this.size = 40, this.color = AppColors.primaryLight});
+  final String? photoAsset;
+  const AvatarPlaceholder({super.key, this.size = 40, this.color = AppColors.primaryLight, this.photoAsset});
 
   @override
   Widget build(BuildContext context) {
+    if (photoAsset != null) {
+      return ClipOval(
+        child: Image.asset(photoAsset!, width: size, height: size, fit: BoxFit.cover),
+      );
+    }
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: AppIcon(
+        IconBodies.person,
+        size: size * 0.55,
+        color: Colors.white.withValues(alpha: 0.9),
+        strokeWidth: 1.8,
+      ),
     );
   }
 }

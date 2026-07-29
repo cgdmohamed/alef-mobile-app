@@ -111,6 +111,8 @@ class _AssignmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final late = assignment.status == AssignmentStatus.late;
+    final submitted = assignment.status == AssignmentStatus.submitted;
+    final secondaryStyle = late || submitted;
     return AppCard(
       border: late ? const Border(right: BorderSide(color: AppColors.coral, width: 3)) : null,
       child: Column(
@@ -133,16 +135,18 @@ class _AssignmentCard extends StatelessWidget {
           ],
           const SizedBox(height: 8),
           GestureDetector(
-            onTap: () => context.push('/assignment/${assignment.id}'),
+            onTap: () => context.push(
+              submitted ? '/assignment/${assignment.id}/result' : '/assignment/${assignment.id}',
+            ),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 9),
               decoration: BoxDecoration(
-                color: late ? AppColors.inputFill : AppColors.primary,
+                color: secondaryStyle ? AppColors.inputFill : AppColors.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
               alignment: Alignment.center,
-              child: Text(assignment.ctaLabel, style: tj(12, weight: FontWeight.w700, color: late ? AppColors.textMuted : Colors.white)),
+              child: Text(assignment.ctaLabel, style: tj(12, weight: FontWeight.w700, color: secondaryStyle ? AppColors.textMuted : Colors.white)),
             ),
           ),
         ],
@@ -155,6 +159,9 @@ class _AssignmentCard extends StatelessWidget {
   Widget _badge() {
     if (assignment.status == AssignmentStatus.late) {
       return const StatusBadge(label: 'متأخر', fg: AppColors.coral, bg: AppColors.dangerBg, padding: _badgePadding, radius: 6);
+    }
+    if (assignment.status == AssignmentStatus.submitted) {
+      return const StatusBadge(label: 'تم التسليم', fg: AppColors.success, bg: AppColors.successBg, padding: _badgePadding, radius: 6);
     }
     if (assignment.timerLabel != null) {
       return StatusBadge(label: assignment.timerLabel!, fg: AppColors.coral, bg: AppColors.dangerBg, padding: _badgePadding, radius: 6);

@@ -36,8 +36,9 @@ class _HomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final assignments = context.watch<AppState>().assignments;
-    final upcoming = assignments.where((a) => a.status == AssignmentStatus.inProgress).take(3).toList();
+    final appState = context.watch<AppState>();
+    final upcoming = appState.assignments.where((a) => a.status == AssignmentStatus.inProgress).take(3).toList();
+    final recordings = appState.meetings.where((m) => m.status == MeetingStatus.ended).take(3).toList();
 
     return Column(
       children: [
@@ -62,7 +63,7 @@ class _HomeContent extends StatelessWidget {
                   const SizedBox(width: 12),
                   GestureDetector(
                     onTap: () => context.go('/profile'),
-                    child: const AvatarPlaceholder(size: 38, color: AppColors.primaryLight),
+                    child: const AvatarPlaceholder(size: 38, photoAsset: 'assets/avatars/lama.png'),
                   ),
                 ],
               ),
@@ -117,7 +118,7 @@ class _HomeContent extends StatelessWidget {
                                   style: tj(12, weight: FontWeight.w700, color: AppColors.textBody),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(_dueLabel(a), style: tj(10, color: AppColors.textFaint)),
+                                Text(a.dueLabel, style: tj(10, color: AppColors.textFaint)),
                                 const SizedBox(height: 8),
                                 ProgressTrack(value: a.progress == 0 ? 0.2 : a.progress),
                               ],
@@ -131,11 +132,16 @@ class _HomeContent extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text('التسجيلات السابقة', style: tj(13, weight: FontWeight.w700, color: AppColors.textHeading)),
                 const SizedBox(height: 8),
-                Row(
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 2.4,
                   children: [
-                    Expanded(child: _RecordingTile(id: 'm4', title: 'أساسيات الهندسة', length: '42:10')),
-                    const SizedBox(width: 10),
-                    Expanded(child: _RecordingTile(id: 'm4', title: 'القراءة النقدية', length: '38:05')),
+                    for (final m in recordings)
+                      _RecordingTile(id: m.id, title: m.title, length: m.recordingLength ?? ''),
                   ],
                 ),
               ],
@@ -144,17 +150,6 @@ class _HomeContent extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _dueLabel(Assignment a) {
-    switch (a.id) {
-      case 'a1':
-        return 'يسلّم غدًا';
-      case 'a2':
-        return '3 أيام متبقية';
-      default:
-        return 'يسلّم بعد أسبوع';
-    }
   }
 }
 
@@ -227,9 +222,17 @@ class _RecordingTile extends StatelessWidget {
               left: 0,
               child: AppIcon(IconBodies.lock, size: 13, color: Colors.white, strokeWidth: 1.8),
             ),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Text('$title • $length', style: tj(9, weight: FontWeight.w600, color: Colors.white)),
+            Positioned(
+              right: 0,
+              left: 0,
+              bottom: 0,
+              child: Text(
+                '$title • $length',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: tj(9, weight: FontWeight.w600, color: Colors.white),
+              ),
             ),
           ],
         ),

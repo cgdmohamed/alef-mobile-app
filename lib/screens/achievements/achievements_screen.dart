@@ -164,7 +164,11 @@ class _LeaderRow extends StatelessWidget {
           child: Text('${entry.rank}', style: tj(11, weight: FontWeight.w800, color: _rankColors[entry.rank])),
         ),
         const SizedBox(width: 8),
-        Container(width: 26, height: 26, decoration: BoxDecoration(color: entry.color, shape: BoxShape.circle)),
+        AvatarPlaceholder(
+          size: 26,
+          color: entry.color,
+          photoAsset: isTop ? 'assets/avatars/lama.png' : null,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(entry.name, style: tj(11, weight: isTop ? FontWeight.w700 : FontWeight.w400, color: AppColors.textBody)),

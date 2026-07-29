@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const AlefApp());
     await tester.pump();
 
-    expect(find.text('منصة ألف'), findsOneWidget);
+    expect(find.text('ألف المستقبل'), findsOneWidget);
 
     // Let the splash screen's auto-navigation timer fire so it doesn't
     // leak past the test's tear-down.

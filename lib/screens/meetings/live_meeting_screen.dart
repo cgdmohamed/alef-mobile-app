@@ -184,6 +184,8 @@ class _ParticipantThumb extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         border: ring ? Border.all(color: AppColors.gold, width: 2) : null,
       ),
+      alignment: Alignment.center,
+      child: AppIcon(IconBodies.person, size: 16, color: Colors.white.withValues(alpha: 0.9), strokeWidth: 1.8),
     );
   }
 }

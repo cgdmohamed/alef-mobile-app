@@ -36,7 +36,10 @@ class ReportDetailScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(12))),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset('assets/avatars/lama.png', width: 44, height: 44, fit: BoxFit.cover),
+                        ),
                         const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

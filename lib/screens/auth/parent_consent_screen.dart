@@ -58,7 +58,7 @@ class _ParentConsentScreenState extends State<ParentConsentScreen> {
                         decoration: BoxDecoration(color: AppColors.tint, borderRadius: BorderRadius.circular(12)),
                         child: Row(
                           children: [
-                            const AvatarPlaceholder(size: 38, color: AppColors.primaryLight),
+                            const AvatarPlaceholder(size: 38, photoAsset: 'assets/avatars/lama.png'),
                             const SizedBox(width: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

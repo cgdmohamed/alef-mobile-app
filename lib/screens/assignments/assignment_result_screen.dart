@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
@@ -19,10 +20,15 @@ class _AssignmentResultScreenState extends State<AssignmentResultScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<AppState>().completeAssignment(widget.assignmentId);
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) showDialog(context: context, barrierDismissible: true, builder: (_) => const _CongratsModal());
-    });
+    final appState = context.read<AppState>();
+    final assignment = appState.assignments.firstWhere((a) => a.id == widget.assignmentId);
+    final wasAlreadySubmitted = assignment.status == AssignmentStatus.submitted;
+    appState.completeAssignment(widget.assignmentId);
+    if (!wasAlreadySubmitted) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) showDialog(context: context, barrierDismissible: true, builder: (_) => const _CongratsModal());
+      });
+    }
   }
 
   @override

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../data/mock_data.dart';
+import '../../state/app_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
@@ -18,14 +21,35 @@ class _RecordingScreenState extends State<RecordingScreen> {
   int _tab = 0;
   static const _speeds = ['1x', '1.25x', '1.5x', '2x'];
 
+  static const _views = {'m4': 312, 'm7': 258, 'm8': 194};
+  static const _tags = {
+    'm4': ['القراءة', 'التفكير النقدي'],
+    'm7': ['البرمجة', 'الروبوتات'],
+    'm8': ['التصميم', 'الإبداع'],
+  };
+  static const _summaries = {
+    'm4': 'في هذا اللقاء ناقشنا أساليب القراءة النقدية وتحليل النصوص، مع تمارين تطبيقية على مقالات قصيرة. تم طرح 3 أسئلة تفاعلية خلال الجلسة.',
+    'm7': 'في هذا اللقاء تعرّفنا على أساسيات البرمجة المرئية بلغة سكراتش، وبنينا أول مشروع تفاعلي بسيط خطوة بخطوة.',
+    'm8': 'في هذا اللقاء استعرضنا مراحل التفكير التصميمي الخمس، وطبّقناها على تحدٍ جماعي لحل مشكلة واقعية.',
+  };
+  static const _defaultSummary =
+      'في هذا اللقاء تعرّفنا على المفاهيم الأساسية للهندسة الإبداعية مع أمثلة تطبيقية. تم طرح 3 أسئلة تفاعلية خلال الجلسة.';
+
   static const _tabContent = [
-    'في هذا اللقاء تعرّفنا على المفاهيم الأساسية للهندسة الإبداعية مع أمثلة تطبيقية. تم طرح 3 أسئلة تفاعلية خلال الجلسة.',
-    'المرفقات المرتبطة بهذا اللقاء: ورقة عمل "الهندسة الإبداعية"، ونموذج التقييم الذاتي، وفيديو تكميلي قصير.',
+    '', // filled in per-meeting at build time
+    'المرفقات المرتبطة بهذا اللقاء: ورقة عمل، ونموذج التقييم الذاتي، وفيديو تكميلي قصير.',
     'الأسئلة الشائعة: كيف أحصل على شهادة حضور؟ هل يمكن مشاهدة اللقاء أكثر من مرة؟ كيف أرسل سؤالًا للمدرب لاحقًا؟',
   ];
 
   @override
   Widget build(BuildContext context) {
+    final meeting = context.read<AppState>().meetings.firstWhere(
+          (m) => m.id == widget.meetingId,
+          orElse: () => MockData.meetings().first,
+        );
+    final views = _views[meeting.id] ?? 120;
+    final tags = _tags[meeting.id] ?? const ['الهندسة', 'الإبداع'];
+    final summary = _summaries[meeting.id] ?? _defaultSummary;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -52,7 +76,10 @@ class _RecordingScreenState extends State<RecordingScreen> {
                   Positioned(
                     top: 36,
                     left: 30,
-                    child: Text('لمى ع. #4821 • 12:04', style: tj(9, weight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.3))),
+                    child: Text(
+                      'لمى ع. #4821 • ${meeting.recordingLength ?? ''}',
+                      style: tj(9, weight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.3)),
+                    ),
                   ),
                   Positioned(
                     top: 14,
@@ -100,9 +127,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('أساسيات الهندسة الإبداعية', style: tj(16, weight: FontWeight.w800, color: AppColors.textHeading)),
+                    Text(meeting.title, style: tj(16, weight: FontWeight.w800, color: AppColors.textHeading)),
                     const SizedBox(height: 6),
-                    Text('أ. سلطان العتيبي • 20 يوليو • 312 مشاهدة', style: tj(11, color: AppColors.textFaint)),
+                    Text('${meeting.teacher} • ${meeting.timeLabel} • $views مشاهدة', style: tj(11, color: AppColors.textFaint)),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -163,22 +190,19 @@ class _RecordingScreenState extends State<RecordingScreen> {
                       ],
                     ),
                     const Divider(height: 20, color: AppColors.divider),
-                    Text(_tabContent[_tab], style: tj(11, color: AppColors.textMuted, height: 1.8)),
+                    Text(_tab == 0 ? summary : _tabContent[_tab], style: tj(11, color: AppColors.textMuted, height: 1.8)),
                     if (_tab == 0) ...[
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                            decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(8)),
-                            child: Text('الهندسة', style: tj(9, weight: FontWeight.w500, color: AppColors.primary)),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                            decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(8)),
-                            child: Text('الإبداع', style: tj(9, weight: FontWeight.w500, color: AppColors.primary)),
-                          ),
+                          for (final tag in tags) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                              decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(8)),
+                              child: Text(tag, style: tj(9, weight: FontWeight.w500, color: AppColors.primary)),
+                            ),
+                            if (tag != tags.last) const SizedBox(width: 8),
+                          ],
                         ],
                       ),
                     ],

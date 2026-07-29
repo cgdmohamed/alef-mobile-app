@@ -19,7 +19,7 @@ class AlefApp extends StatelessWidget {
         builder: (context) {
           final router = buildAppRouter(context.read<AppState>());
           return MaterialApp.router(
-            title: 'منصة ألف',
+            title: 'ألف المستقبل',
             debugShowCheckedModeBanner: false,
             theme: buildAppTheme(),
             routerConfig: router,
