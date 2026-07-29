@@ -248,53 +248,56 @@ class _PollSheetState extends State<_PollSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('سؤال من المدرب', style: tj(13, weight: FontWeight.w700, color: AppColors.textHeading)),
-              Text('$_seconds ثانية', style: tj(10, weight: FontWeight.w600, color: AppColors.textFaint)),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('سؤال من المدرب', style: tj(13, weight: FontWeight.w700, color: AppColors.textHeading)),
+                Text('$_seconds ثانية', style: tj(10, weight: FontWeight.w600, color: AppColors.textFaint)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text('ما هو أفضل شكل هندسي لتوزيع الأحمال في الجسر؟', style: tj(13, color: AppColors.textBody)),
+            const SizedBox(height: 12),
+            for (var i = 0; i < _options.length; i++) ...[
+              GestureDetector(
+                onTap: () => setState(() => _selected = i),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(11),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: _selected == i ? AppColors.tint : Colors.white,
+                    border: Border.all(color: _selected == i ? AppColors.primary : AppColors.border, width: _selected == i ? 1.5 : 1.5),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Text(
+                    _options[i],
+                    style: tj(12, weight: _selected == i ? FontWeight.w600 : FontWeight.w400, color: _selected == i ? AppColors.primary : AppColors.textBody),
+                  ),
+                ),
+              ),
             ],
-          ),
-          const SizedBox(height: 10),
-          Text('ما هو أفضل شكل هندسي لتوزيع الأحمال في الجسر؟', style: tj(13, color: AppColors.textBody)),
-          const SizedBox(height: 12),
-          for (var i = 0; i < _options.length; i++) ...[
+            const SizedBox(height: 4),
             GestureDetector(
-              onTap: () => setState(() => _selected = i),
+              onTap: () => Navigator.of(context).maybePop(),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(11),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: _selected == i ? AppColors.tint : Colors.white,
-                  border: Border.all(color: _selected == i ? AppColors.primary : AppColors.border, width: _selected == i ? 1.5 : 1.5),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Text(
-                  _options[i],
-                  style: tj(12, weight: _selected == i ? FontWeight.w600 : FontWeight.w400, color: _selected == i ? AppColors.primary : AppColors.textBody),
-                ),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
+                alignment: Alignment.center,
+                child: Text('إرسال الإجابة', style: tj(13, weight: FontWeight.w700, color: Colors.white)),
               ),
             ),
           ],
-          const SizedBox(height: 4),
-          GestureDetector(
-            onTap: () => Navigator.of(context).maybePop(),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
-              alignment: Alignment.center,
-              child: Text('إرسال الإجابة', style: tj(13, weight: FontWeight.w700, color: Colors.white)),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
