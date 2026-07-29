@@ -46,13 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(16)),
-                  alignment: Alignment.center,
-                  child: Text('أ', style: tj(24, weight: FontWeight.w900, color: Colors.white)),
-                ),
+                child: Image.asset('assets/branding/logo_mark_color.png', width: 56, height: 56),
               ),
               const SizedBox(height: 22),
               Text('مرحبًا بعودتك', style: tj(26, weight: FontWeight.w800, color: AppColors.textHeading)),

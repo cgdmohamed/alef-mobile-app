@@ -29,18 +29,10 @@ class _SplashScreenState extends State<SplashScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
+                Image.asset(
+                  'assets/branding/logo_mark_white.png',
                   width: 104,
                   height: 104,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(color: AppColors.primary.withValues(alpha: 0.45), blurRadius: 30, offset: const Offset(0, 8)),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: Text('أ', style: tj(44, weight: FontWeight.w900, color: Colors.white)),
                 ),
                 const SizedBox(height: 22),
                 Text('منصة ألف', style: tj(30, weight: FontWeight.w900, color: Colors.white)),
