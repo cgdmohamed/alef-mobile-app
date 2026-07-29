@@ -13,7 +13,7 @@ class AppColors {
   static const Color coral = Color(0xFFFF6B6B); // danger / overdue accent
   static const Color border = Color(0xFFE2E8F0); // hairline / input border
 
-  static const Color scaffold = Color(0xFFF1F0F9); // tablet/desktop letterbox backdrop
+  static const Color scaffold = Color(0xFFF1F0F9); // gallery bg (unused in-app)
   static const Color screenBg = Color(0xFFF7F7FC); // most screen backgrounds
   static const Color card = Color(0xFFFFFFFF);
   static const Color inputFill = Color(0xFFF3F3FB);

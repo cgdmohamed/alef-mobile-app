@@ -246,7 +246,7 @@ class _HomeLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -268,11 +268,8 @@ class _HomeLoading extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Skeleton(height: 90),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Text('جارِ التحميل...', style: tj(12, weight: FontWeight.w500, color: AppColors.textDisabled)),
-          ),
+          const SizedBox(height: 24),
+          Text('جارِ التحميل...', style: tj(12, weight: FontWeight.w500, color: AppColors.textDisabled)),
         ],
       ),
     );
