@@ -12,6 +12,8 @@ class AppColors {
   static const Color sky = Color(0xFF3FA9F5); // info / attendance accent
   static const Color coral = Color(0xFFFF6B6B); // danger / overdue accent
   static const Color border = Color(0xFFE2E8F0); // hairline / input border
+  static const Color mint = Color(0xFF22B07D); // school-code success / live-activity accent
+  static const Color mintDark = Color(0xFF12876A); // live-activity gradient end
 
   static const Color scaffold = Color(0xFFF1F0F9); // gallery bg (unused in-app)
   static const Color screenBg = Color(0xFFF7F7FC); // most screen backgrounds

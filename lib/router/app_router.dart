@@ -2,11 +2,13 @@ import 'package:go_router/go_router.dart';
 import '../screens/splash_screen.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/auth/school_code_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/auth/otp_screen.dart';
 import '../screens/auth/parent_consent_screen.dart';
 import '../screens/main_shell.dart';
 import '../screens/home/home_router_screen.dart';
+import '../screens/home/live_activity_screen.dart';
 import '../screens/meetings/meetings_list_screen.dart';
 import '../screens/meetings/live_meeting_screen.dart';
 import '../screens/meetings/recording_screen.dart';
@@ -29,8 +31,10 @@ GoRouter buildAppRouter(AppState appState) {
       GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/signup', builder: (context, state) => const SignupScreen()),
+      GoRoute(path: '/signup', builder: (context, state) => const SchoolCodeScreen()),
+      GoRoute(path: '/signup/details', builder: (context, state) => const SignupScreen()),
       GoRoute(path: '/forgot-password', builder: (context, state) => const OtpScreen()),
+      GoRoute(path: '/live-activity', builder: (context, state) => const LiveActivityScreen()),
       GoRoute(path: '/parent-consent', builder: (context, state) => const ParentConsentScreen()),
       GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
