@@ -47,11 +47,11 @@ class _NotificationBellState extends State<NotificationBell> {
             const AppIcon(IconBodies.bell, size: 18, color: AppColors.primary, strokeWidth: 1.8),
             if (_unread > 0)
               Positioned(
-                top: -8,
-                right: -8,
+                top: -9,
+                right: -9,
                 child: Container(
-                  width: 14,
-                  height: 14,
+                  width: 18,
+                  height: 18,
                   decoration: const BoxDecoration(color: AppColors.coral, shape: BoxShape.circle),
                   alignment: Alignment.center,
                   child: Text('$_unread', style: tj(8, weight: FontWeight.w700, color: Colors.white)),

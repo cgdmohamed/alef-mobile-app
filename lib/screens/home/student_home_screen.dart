@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -136,6 +137,8 @@ class _HomeContentState extends State<_HomeContent> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const _LiveActivityBanner(),
+                  const SizedBox(height: 12),
                   if (nextMeeting != null) _LiveMeetingHero(meeting: nextMeeting),
                   if (nextMeeting != null) const SizedBox(height: 16),
                   GridView.count(
@@ -214,6 +217,92 @@ class _HomeContentState extends State<_HomeContent> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Trainer-pushed timed activity banner — always shown above the meeting
+/// hero, matching the app's populated-demo-data philosophy. The countdown
+/// is cosmetic (no real deadline behind it, same as the meeting hero's
+/// static "بعد ساعة و20 دقيقة" label) — it just ticks down for realism.
+class _LiveActivityBanner extends StatefulWidget {
+  const _LiveActivityBanner();
+
+  @override
+  State<_LiveActivityBanner> createState() => _LiveActivityBannerState();
+}
+
+class _LiveActivityBannerState extends State<_LiveActivityBanner> {
+  Timer? _timer;
+  int _seconds = 4 * 60 + 32;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_seconds == 0) {
+        t.cancel();
+      } else {
+        setState(() => _seconds--);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mm = (_seconds ~/ 60).toString().padLeft(2, '0');
+    final ss = (_seconds % 60).toString().padLeft(2, '0');
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.mint, AppColors.mintDark],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(color: AppColors.mint.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 10))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('نشاط مباشر الآن — أرسله مدربك', style: tj(11, weight: FontWeight.w700, color: Colors.white)),
+              ),
+              Text('$mm:$ss', style: tj(11, weight: FontWeight.w700, color: Colors.white)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('بحث عن الكلمات: مفاتيح التفكير', style: tj(16, weight: FontWeight.w800, color: Colors.white)),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text('يُغلق تلقائيًا بانتهاء الوقت', style: tj(11, color: const Color(0xFFDFF6EC))),
+              ),
+              GestureDetector(
+                onTap: () => context.push('/live-activity'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                  child: Text('ابدأ الآن', style: tj(12, weight: FontWeight.w800, color: AppColors.mintDark)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -310,7 +399,7 @@ class _HomeLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -332,11 +421,8 @@ class _HomeLoading extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Skeleton(height: 90),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Text('جارِ التحميل...', style: tj(12, weight: FontWeight.w500, color: AppColors.textDisabled)),
-          ),
+          const SizedBox(height: 24),
+          Text('جارِ التحميل...', style: tj(12, weight: FontWeight.w500, color: AppColors.textDisabled)),
         ],
       ),
     );

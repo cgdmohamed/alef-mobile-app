@@ -68,7 +68,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       backgroundColor: AppColors.screenBg,
       body: SafeArea(
-        bottom: false,
         child: Column(
           children: [
             Padding(

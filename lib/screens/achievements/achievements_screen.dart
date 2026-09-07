@@ -15,11 +15,14 @@ class AchievementsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.screenBg,
       appBar: AppBar(title: Text('الإنجازات', style: tj(20, weight: FontWeight.w800, color: AppColors.textHeading))),
-      body: SectionState(
-        section: DemoSection.achievements,
-        loading: (context) => const _AchievementsLoading(),
-        empty: (context) => const _AchievementsEmpty(),
-        content: (context) => const _AchievementsContent(),
+      body: SafeArea(
+        top: false,
+        child: SectionState(
+          section: DemoSection.achievements,
+          loading: (context) => const _AchievementsLoading(),
+          empty: (context) => const _AchievementsEmpty(),
+          content: (context) => const _AchievementsContent(),
+        ),
       ),
     );
   }

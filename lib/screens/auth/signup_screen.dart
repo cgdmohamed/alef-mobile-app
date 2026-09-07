@@ -7,6 +7,7 @@ import '../../theme/app_text.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
 import 'widgets/auth_text_field.dart';
+import 'widgets/step_indicator.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -103,7 +104,39 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
+              const StepIndicator(step: 2),
+              const SizedBox(height: 14),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.tint,
+                  border: Border.all(color: AppColors.tintBorder),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: const BoxDecoration(color: AppColors.mint, shape: BoxShape.circle),
+                      alignment: Alignment.center,
+                      child: Text('✓', style: tj(8, weight: FontWeight.w700, color: Colors.white)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'مدارس الرواد · المفكر الناقد الصغير · السادس/أ',
+                        style: tj(11, weight: FontWeight.w600, color: AppColors.ink),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('بيانات الطالب', style: tj(20, weight: FontWeight.w800, color: AppColors.textHeading)),
+              const SizedBox(height: 16),
               AuthTextField(label: 'اسم الطالب الثلاثي', controller: _studentName, labelSize: 11, valueSize: 13, radius: 11),
               const SizedBox(height: 12),
               AuthTextField(
