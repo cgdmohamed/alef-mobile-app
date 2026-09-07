@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../models/models.dart';
-import '../../state/app_state.dart';
+import '../../services/meetings_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
-import '../../widgets/section_state.dart';
 
 enum _MeetingFilter { all, upcoming, ended }
 
@@ -23,14 +20,53 @@ class _MeetingsListScreenState extends State<MeetingsListScreen> {
   final _search = TextEditingController();
   _MeetingFilter _filter = _MeetingFilter.all;
   bool _calendarView = false;
+  bool _loading = true;
+  String? _error;
+  List<ApiMeeting> _all = [];
 
-  List<Meeting> _filtered(List<Meeting> all) {
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await MeetingsApi.instance.list();
+      if (!mounted) return;
+      setState(() {
+        _all = data;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'تعذر تحميل اللقاءات';
+        _loading = false;
+      });
+    }
+  }
+
+  String _group(ApiMeeting m) {
+    if (m.status == 'ended') return 'منتهية';
+    final now = DateTime.now();
+    final diff = m.scheduledAt.difference(DateTime(now.year, now.month, now.day)).inDays;
+    if (diff <= 0) return 'اليوم';
+    if (diff == 1) return 'غدًا';
+    return 'هذا الأسبوع';
+  }
+
+  List<ApiMeeting> _filtered(List<ApiMeeting> all) {
     return all.where((m) {
       final matchesSearch = _search.text.trim().isEmpty || m.title.contains(_search.text.trim());
       final matchesFilter = switch (_filter) {
         _MeetingFilter.all => true,
-        _MeetingFilter.upcoming => m.status != MeetingStatus.ended,
-        _MeetingFilter.ended => m.status == MeetingStatus.ended,
+        _MeetingFilter.upcoming => m.status != 'ended',
+        _MeetingFilter.ended => m.status == 'ended',
       };
       return matchesSearch && matchesFilter;
     }).toList();
@@ -38,8 +74,7 @@ class _MeetingsListScreenState extends State<MeetingsListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final all = context.watch<AppState>().meetings;
-    final filtered = _filtered(all);
+    final filtered = _filtered(_all);
 
     return Scaffold(
       backgroundColor: AppColors.screenBg,
@@ -122,13 +157,20 @@ class _MeetingsListScreenState extends State<MeetingsListScreen> {
               ),
             ),
             Expanded(
-              child: SectionState(
-                section: DemoSection.meetings,
-                loading: (context) => const _MeetingsLoading(),
-                empty: (context) => const _MeetingsEmpty(),
-                isEmpty: (context) => filtered.isEmpty,
-                content: (context) => _calendarView ? _CalendarView(meetings: all) : _MeetingsList(meetings: filtered),
-              ),
+              child: _loading
+                  ? const _MeetingsLoading()
+                  : _error != null
+                      ? StateMessage(
+                          icon: Text('!', style: tj(40, color: AppColors.coral)),
+                          iconBg: AppColors.dangerBg,
+                          title: 'تعذر تحميل اللقاءات',
+                          subtitle: 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى',
+                          actionLabel: 'إعادة المحاولة',
+                          onAction: _load,
+                        )
+                      : filtered.isEmpty
+                          ? const _MeetingsEmpty()
+                          : (_calendarView ? _CalendarView(meetings: _all, group: _group) : _MeetingsList(meetings: filtered, group: _group)),
             ),
           ],
         ),
@@ -138,25 +180,26 @@ class _MeetingsListScreenState extends State<MeetingsListScreen> {
 }
 
 class _MeetingsList extends StatelessWidget {
-  final List<Meeting> meetings;
-  const _MeetingsList({required this.meetings});
+  final List<ApiMeeting> meetings;
+  final String Function(ApiMeeting) group;
+  const _MeetingsList({required this.meetings, required this.group});
 
   @override
   Widget build(BuildContext context) {
-    final groups = <String, List<Meeting>>{};
+    final groups = <String, List<ApiMeeting>>{};
     for (final m in meetings) {
-      groups.putIfAbsent(m.group, () => []).add(m);
+      groups.putIfAbsent(group(m), () => []).add(m);
     }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       children: [
-        for (final group in groups.entries) ...[
+        for (final g in groups.entries) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 6, top: 4),
-            child: Text(group.key, style: tj(12, weight: FontWeight.w700, color: AppColors.textFaint)),
+            child: Text(g.key, style: tj(12, weight: FontWeight.w700, color: AppColors.textFaint)),
           ),
-          for (final m in group.value) ...[
+          for (final m in g.value) ...[
             _MeetingCard(meeting: m),
             const SizedBox(height: 10),
           ],
@@ -167,15 +210,16 @@ class _MeetingsList extends StatelessWidget {
 }
 
 class _MeetingCard extends StatelessWidget {
-  final Meeting meeting;
+  final ApiMeeting meeting;
   const _MeetingCard({required this.meeting});
 
   @override
   Widget build(BuildContext context) {
-    final ended = meeting.status == MeetingStatus.ended;
+    final ended = meeting.status == 'ended';
+    final live = meeting.status == 'live';
     return GestureDetector(
       onTap: () {
-        if (meeting.status == MeetingStatus.liveNow) {
+        if (live) {
           context.push('/meeting/live/${meeting.id}');
         } else if (ended) {
           context.push('/meeting/recording/${meeting.id}');
@@ -184,9 +228,7 @@ class _MeetingCard extends StatelessWidget {
       child: Opacity(
         opacity: ended ? 0.75 : 1,
         child: AppCard(
-          border: meeting.status == MeetingStatus.liveNow
-              ? const Border(right: BorderSide(color: AppColors.coral, width: 3))
-              : null,
+          border: live ? const Border(right: BorderSide(color: AppColors.coral, width: 3)) : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -214,7 +256,10 @@ class _MeetingCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              Text('${meeting.timeLabel} • ${meeting.teacher}', style: tj(11, color: AppColors.textFaint)),
+              Text(
+                '${meeting.scheduledAt.hour.toString().padLeft(2, '0')}:${meeting.scheduledAt.minute.toString().padLeft(2, '0')} • ${meeting.teacherName ?? ''}',
+                style: tj(11, color: AppColors.textFaint),
+              ),
             ],
           ),
         ),
@@ -222,18 +267,19 @@ class _MeetingCard extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(MeetingStatus status) {
+  Widget _statusBadge(String status) {
     return switch (status) {
-      MeetingStatus.liveNow => const StatusBadge(label: 'مباشر الآن', fg: AppColors.coral, bg: AppColors.dangerBg),
-      MeetingStatus.upcoming => const StatusBadge(label: 'قادم', fg: AppColors.success, bg: AppColors.successBg),
-      MeetingStatus.ended => Text('منتهٍ', style: tj(10, color: AppColors.textFaint)),
+      'live' => const StatusBadge(label: 'مباشر الآن', fg: AppColors.coral, bg: AppColors.dangerBg),
+      'ended' => Text('منتهٍ', style: tj(10, color: AppColors.textFaint)),
+      _ => const StatusBadge(label: 'قادم', fg: AppColors.success, bg: AppColors.successBg),
     };
   }
 }
 
 class _CalendarView extends StatefulWidget {
-  final List<Meeting> meetings;
-  const _CalendarView({required this.meetings});
+  final List<ApiMeeting> meetings;
+  final String Function(ApiMeeting) group;
+  const _CalendarView({required this.meetings, required this.group});
 
   @override
   State<_CalendarView> createState() => _CalendarViewState();
@@ -248,6 +294,9 @@ class _CalendarViewState extends State<_CalendarView> {
     final firstOfMonth = DateTime(now.year, now.month, 1);
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
     final leading = firstOfMonth.weekday % 7;
+    final selectedMeetings = widget.meetings
+        .where((m) => m.scheduledAt.year == _selected.year && m.scheduledAt.month == _selected.month && m.scheduledAt.day == _selected.day)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
@@ -265,7 +314,7 @@ class _CalendarViewState extends State<_CalendarView> {
                 day: d,
                 isToday: d == now.day,
                 isSelected: d == _selected.day,
-                hasMeeting: d == now.day || d == now.day + 1,
+                hasMeeting: widget.meetings.any((m) => m.scheduledAt.year == now.year && m.scheduledAt.month == now.month && m.scheduledAt.day == d),
                 onTap: () => setState(() => _selected = DateTime(now.year, now.month, d)),
               ),
           ],
@@ -273,18 +322,13 @@ class _CalendarViewState extends State<_CalendarView> {
         const SizedBox(height: 16),
         Text('لقاءات اليوم المحدد', style: tj(12, weight: FontWeight.w700, color: AppColors.textHeading)),
         const SizedBox(height: 8),
-        if (_selected.day == now.day)
-          for (final m in widget.meetings.where((m) => m.group == 'اليوم')) ...[
-            _MeetingCard(meeting: m),
-            const SizedBox(height: 10),
-          ]
-        else if (_selected.day == now.day + 1)
-          for (final m in widget.meetings.where((m) => m.group == 'غدًا')) ...[
-            _MeetingCard(meeting: m),
-            const SizedBox(height: 10),
-          ]
+        if (selectedMeetings.isEmpty)
+          Text('لا توجد لقاءات في هذا اليوم', style: tj(12, color: AppColors.textFaint))
         else
-          Text('لا توجد لقاءات في هذا اليوم', style: tj(12, color: AppColors.textFaint)),
+          for (final m in selectedMeetings) ...[
+            _MeetingCard(meeting: m),
+            const SizedBox(height: 10),
+          ],
       ],
     );
   }

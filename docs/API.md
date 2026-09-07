@@ -186,7 +186,7 @@ Any authenticated user. Omit `scope` for all meetings.
 {
   id, title, scheduledAt, durationMinutes,
   status: "scheduled" | "live" | "ended",
-  zoomSessionName: string | null,
+  agoraChannelName: string | null,
   classId,
   classEntity: { id, name, teacher: { name } | null, ... }
 }
@@ -197,16 +197,20 @@ Any authenticated user
 
 →
 ```ts
-{ "sessionName": "alef-<meetingId>", "token": "<jwt>", "sdkKey": "<zoom sdk key>" }
+{ "channelName": "alef-<meetingId>", "token": "<rtc token>", "appId": "<agora app id>", "uid": 0 }
 ```
 
-This is a **Zoom Video SDK** join credential, not a URL — pass it straight
-into `flutter_zoom_videosdk`'s `JoinSessionConfig` (`sessionName`, `token`)
-along with the app's own `ZOOM_SDK_KEY`/`sdkKey`. **A fresh call is required
-per join attempt** — the token is short-lived (2h) and single-purpose, it is
-never cached or reused across sessions. Role is derived server-side from the
-caller (`teacher` → Zoom host, everyone else → participant) — the mobile app
-is always a participant since there's no teacher role on this client.
+This is an **Agora RTC** join credential, not a URL — pass it straight into
+`agora_rtc_engine`'s `engine.joinChannel(token:, channelId: channelName,
+uid:, options:)` along with the app's own `appId` (passed to
+`engine.initialize(RtcEngineContext(appId: ...))`). **A fresh call is
+required per join attempt** — the token is short-lived (2h) and
+single-purpose, it is never cached or reused across sessions. `uid` is
+always `0` (wildcard) — the token authorizes any numeric uid and each
+client lets the Agora SDK assign its own uid on join. There's no
+host/participant distinction — everyone gets full publish rights (Agora's
+role concept only meaningfully restricts publishing in the "live
+broadcasting" channel profile; this app uses "communication").
 
 ### `GET /meetings/:id/recording`
 Any authenticated user
@@ -214,9 +218,9 @@ Any authenticated user
 → `{ title, playbackUrl, durationSeconds, views }`
 
 **404** if no recording is available yet — `MeetingsApi.recording()` returns
-`null`. Real (non-mock) cloud recordings additionally require a Zoom
-Server-to-Server OAuth app that isn't wired up yet, so this stays `null` in
-production until that's built.
+`null`. Real (non-mock) cloud recordings additionally require Agora's
+separate Cloud Recording REST API that isn't wired up yet, so this stays
+`null` in production until that's built.
 
 ---
 

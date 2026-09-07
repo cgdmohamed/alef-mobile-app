@@ -2,13 +2,22 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_api.dart';
+import '../../services/api_client.dart';
+import '../../state/app_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/buttons.dart';
 
+enum OtpPurpose { login }
+
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key});
+  final String phone;
+  final OtpPurpose purpose;
+
+  const OtpScreen({super.key, required this.phone, this.purpose = OtpPurpose.login});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -19,10 +28,19 @@ class _OtpScreenState extends State<OtpScreen> {
   final List<FocusNode> _nodes = List.generate(6, (_) => FocusNode());
   Timer? _timer;
   int _seconds = 47;
+  bool _submitting = false;
+  bool _resending = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _seconds = 47;
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_seconds == 0) {
         t.cancel();
@@ -46,10 +64,35 @@ class _OtpScreenState extends State<OtpScreen> {
 
   bool get _complete => _controllers.every((c) => c.text.isNotEmpty);
 
-  void _confirm() {
-    if (!_complete) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تأكيد الرمز بنجاح')));
-    context.go('/login');
+  Future<void> _resend() async {
+    if (_seconds > 0 || _resending) return;
+    setState(() => _resending = true);
+    try {
+      await AuthApi.instance.requestOtp(widget.phone);
+      if (mounted) _startTimer();
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _resending = false);
+    }
+  }
+
+  Future<void> _confirm() async {
+    if (!_complete || _submitting) return;
+    final code = _controllers.map((c) => c.text).join();
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await context.read<AppState>().verifyOtp(widget.phone, code);
+      if (!mounted) return;
+      context.go('/home');
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -82,10 +125,17 @@ class _OtpScreenState extends State<OtpScreen> {
               Text('رمز التحقق', style: tj(24, weight: FontWeight.w800, color: AppColors.textHeading)),
               const SizedBox(height: 8),
               Text(
-                'تم إرسال رمز مكوّن من 6 أرقام إلى sara.ahmed@email.com',
+                'تم إرسال رمز مكوّن من 6 أرقام إلى ${widget.phone}',
                 style: tj(13, color: AppColors.textMuted, height: 1.7),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 14),
+              if (_error != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(color: AppColors.dangerBg, borderRadius: BorderRadius.circular(10)),
+                  child: Text(_error!, style: tj(12, color: AppColors.coral)),
+                ),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(6, (i) {
@@ -140,15 +190,23 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
               const SizedBox(height: 26),
               Center(
-                child: RichText(
-                  text: TextSpan(
-                    style: tj(12, color: AppColors.textFaint),
-                    children: [
-                      const TextSpan(text: 'إعادة إرسال الرمز خلال '),
-                      TextSpan(text: '$mm:$ss', style: tj(12, weight: FontWeight.w700, color: AppColors.primary)),
-                    ],
-                  ),
-                ),
+                child: _seconds > 0
+                    ? RichText(
+                        text: TextSpan(
+                          style: tj(12, color: AppColors.textFaint),
+                          children: [
+                            const TextSpan(text: 'إعادة إرسال الرمز خلال '),
+                            TextSpan(text: '$mm:$ss', style: tj(12, weight: FontWeight.w700, color: AppColors.primary)),
+                          ],
+                        ),
+                      )
+                    : GestureDetector(
+                        onTap: _resend,
+                        child: Text(
+                          _resending ? 'جارٍ إعادة الإرسال...' : 'إعادة إرسال الرمز',
+                          style: tj(12, weight: FontWeight.w700, color: AppColors.primary),
+                        ),
+                      ),
               ),
               const Spacer(),
               Column(
@@ -169,7 +227,11 @@ class _OtpScreenState extends State<OtpScreen> {
                 ],
               ),
               const Spacer(),
-              PrimaryButton(label: 'تأكيد', shadow: false, onTap: _complete ? _confirm : null),
+              PrimaryButton(
+                label: _submitting ? 'جارٍ التأكيد...' : 'تأكيد',
+                shadow: false,
+                onTap: (_complete && !_submitting) ? _confirm : null,
+              ),
             ],
           ),
         ),

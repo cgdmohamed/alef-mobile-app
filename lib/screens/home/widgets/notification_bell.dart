@@ -1,20 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../../state/app_state.dart';
+import '../../../services/notifications_api.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_text.dart';
 import '../../../widgets/app_icon.dart';
 
 /// The bell icon + unread-count dot shown in both home dashboards' header.
-class NotificationBell extends StatelessWidget {
+class NotificationBell extends StatefulWidget {
   const NotificationBell({super.key});
 
   @override
+  State<NotificationBell> createState() => _NotificationBellState();
+}
+
+class _NotificationBellState extends State<NotificationBell> {
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationsApi.instance.unreadCount().then((v) {
+      if (mounted) setState(() => _unread = v);
+    }).catchError((_) {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final unread = context.watch<AppState>().unreadNotifications;
     return GestureDetector(
-      onTap: () => context.push('/notifications'),
+      onTap: () async {
+        await context.push('/notifications');
+        if (mounted) {
+          NotificationsApi.instance.unreadCount().then((v) {
+            if (mounted) setState(() => _unread = v);
+          }).catchError((_) {});
+        }
+      },
       child: Container(
         width: 38,
         height: 38,
@@ -25,7 +45,7 @@ class NotificationBell extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             const AppIcon(IconBodies.bell, size: 18, color: AppColors.primary, strokeWidth: 1.8),
-            if (unread > 0)
+            if (_unread > 0)
               Positioned(
                 top: -8,
                 right: -8,
@@ -34,7 +54,7 @@ class NotificationBell extends StatelessWidget {
                   height: 14,
                   decoration: const BoxDecoration(color: AppColors.coral, shape: BoxShape.circle),
                   alignment: Alignment.center,
-                  child: Text('$unread', style: tj(8, weight: FontWeight.w700, color: Colors.white)),
+                  child: Text('$_unread', style: tj(8, weight: FontWeight.w700, color: Colors.white)),
                 ),
               ),
           ],

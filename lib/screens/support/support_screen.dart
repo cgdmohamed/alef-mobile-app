@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
-import '../../models/models.dart';
+import 'package:provider/provider.dart';
+import '../../services/support_api.dart';
+import '../../state/app_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
@@ -15,36 +15,49 @@ class SupportScreen extends StatefulWidget {
 }
 
 class _SupportScreenState extends State<SupportScreen> {
-  final List<ChatMessage> _messages = List.of(MockData.supportSeed);
   final _input = TextEditingController();
   final _scroll = ScrollController();
-  bool _typing = false;
+  String? _conversationId;
+  List<ApiSupportMessage> _messages = [];
+  bool _loading = true;
+  bool _sending = false;
 
-  static const _quickReplies = ['كيف أعيد جدولة لقاء؟', 'مشكلة بالدخول'];
-  static const _autoReplies = [
-    'شكرًا لتواصلك، سيتم الرد خلال دقائق.',
-    'تم تسجيل طلبك وسيقوم أحد المختصين بمراجعته.',
-    'هل هناك تفاصيل إضافية تودّين مشاركتها؟',
-  ];
-  int _replyIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
 
-  void _send(String text) {
-    if (text.trim().isEmpty) return;
-    setState(() {
-      _messages.add(ChatMessage(text, fromUser: true));
-      _input.clear();
-      _typing = true;
-    });
-    _scrollToBottom();
-    Future.delayed(const Duration(milliseconds: 900), () {
+  Future<void> _init() async {
+    try {
+      final id = await SupportApi.instance.myConversationId();
+      final messages = await SupportApi.instance.messages(id);
       if (!mounted) return;
       setState(() {
-        _typing = false;
-        _messages.add(ChatMessage(_autoReplies[_replyIndex % _autoReplies.length]));
-        _replyIndex++;
+        _conversationId = id;
+        _messages = messages;
+        _loading = false;
       });
       _scrollToBottom();
-    });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _send(String text) async {
+    if (text.trim().isEmpty || _conversationId == null || _sending) return;
+    setState(() => _sending = true);
+    _input.clear();
+    try {
+      final sent = await SupportApi.instance.sendMessage(_conversationId!, text);
+      if (!mounted) return;
+      setState(() => _messages.add(sent));
+      _scrollToBottom();
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال الرسالة')));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   void _scrollToBottom() {
@@ -82,55 +95,31 @@ class _SupportScreenState extends State<SupportScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('خدمة العملاء', style: tj(13, weight: FontWeight.w700, color: AppColors.textHeading)),
-                      Text('● متصل الآن', style: tj(10, color: AppColors.success)),
+                      Text('سيتم الرد من فريق الدعم قريبًا', style: tj(10, color: AppColors.textFaint)),
                     ],
                   ),
                 ],
               ),
             ),
             Expanded(
-              child: ListView(
-                controller: _scroll,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-                children: [
-                  for (final m in _messages) _Bubble(message: m),
-                  if (_typing)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Text('يكتب الآن...', style: tj(11, color: AppColors.textDisabled)),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final q in _quickReplies)
-                    GestureDetector(
-                      onTap: () => _send(q),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(9)),
-                        child: Text(q, style: tj(10, weight: FontWeight.w500, color: AppColors.primary)),
-                      ),
-                    ),
-                ],
-              ),
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                  : _messages.isEmpty
+                      ? Center(child: Text('ابدأ محادثة مع فريق الدعم', style: tj(12, color: AppColors.textFaint)))
+                      : ListView(
+                          controller: _scroll,
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                          children: [
+                            for (final m in _messages)
+                              _Bubble(message: m, fromUser: m.senderId == context.watch<AppState>().currentUser?.id),
+                          ],
+                        ),
             ),
             Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
               decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.divider))),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('إرفاق ملف'))),
-                    child: const AppIcon(IconBodies.paperclip, size: 16, color: AppColors.textFaint, strokeWidth: 1.8),
-                  ),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -169,27 +158,28 @@ class _SupportScreenState extends State<SupportScreen> {
 }
 
 class _Bubble extends StatelessWidget {
-  final ChatMessage message;
-  const _Bubble({required this.message});
+  final ApiSupportMessage message;
+  final bool fromUser;
+  const _Bubble({required this.message, required this.fromUser});
 
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: message.fromUser ? Alignment.centerLeft : Alignment.centerRight,
+      alignment: fromUser ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: message.fromUser ? AppColors.primary : AppColors.inputFill,
+          color: fromUser ? AppColors.primary : AppColors.inputFill,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(14),
             topRight: const Radius.circular(14),
-            bottomLeft: Radius.circular(message.fromUser ? 14 : 4),
-            bottomRight: Radius.circular(message.fromUser ? 4 : 14),
+            bottomLeft: Radius.circular(fromUser ? 14 : 4),
+            bottomRight: Radius.circular(fromUser ? 4 : 14),
           ),
         ),
-        child: Text(message.text, style: tj(12, color: message.fromUser ? Colors.white : AppColors.textBody)),
+        child: Text(message.text, style: tj(12, color: fromUser ? Colors.white : AppColors.textBody)),
       ),
     );
   }

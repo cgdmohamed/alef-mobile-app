@@ -38,6 +38,10 @@ dependencies:
   flutter_svg: ^2.0.16
   provider: ^6.1.2
   intl: ^0.19.0
+  http: ^1.2.2
+  shared_preferences: ^2.3.3
+  agora_rtc_engine: ^6.5.2
+  no_screenshot: ^2.0.1
 
 dev_dependencies:
   flutter_test:

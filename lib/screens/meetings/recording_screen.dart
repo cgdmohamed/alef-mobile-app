@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../data/mock_data.dart';
-import '../../state/app_state.dart';
+import '../../services/meetings_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
+import '../../widgets/misc.dart';
 
 class RecordingScreen extends StatefulWidget {
   final String meetingId;
@@ -16,40 +15,68 @@ class RecordingScreen extends StatefulWidget {
 
 class _RecordingScreenState extends State<RecordingScreen> {
   bool _playing = false;
-  double _progress = 0.35;
+  double _progress = 0;
   int _speedIndex = 0;
-  int _tab = 0;
   static const _speeds = ['1x', '1.25x', '1.5x', '2x'];
 
-  static const _views = {'m4': 312, 'm7': 258, 'm8': 194};
-  static const _tags = {
-    'm4': ['القراءة', 'التفكير النقدي'],
-    'm7': ['البرمجة', 'الروبوتات'],
-    'm8': ['التصميم', 'الإبداع'],
-  };
-  static const _summaries = {
-    'm4': 'في هذا اللقاء ناقشنا أساليب القراءة النقدية وتحليل النصوص، مع تمارين تطبيقية على مقالات قصيرة. تم طرح 3 أسئلة تفاعلية خلال الجلسة.',
-    'm7': 'في هذا اللقاء تعرّفنا على أساسيات البرمجة المرئية بلغة سكراتش، وبنينا أول مشروع تفاعلي بسيط خطوة بخطوة.',
-    'm8': 'في هذا اللقاء استعرضنا مراحل التفكير التصميمي الخمس، وطبّقناها على تحدٍ جماعي لحل مشكلة واقعية.',
-  };
-  static const _defaultSummary =
-      'في هذا اللقاء تعرّفنا على المفاهيم الأساسية للهندسة الإبداعية مع أمثلة تطبيقية. تم طرح 3 أسئلة تفاعلية خلال الجلسة.';
+  bool _loading = true;
+  String? _error;
+  ApiRecording? _recording;
 
-  static const _tabContent = [
-    '', // filled in per-meeting at build time
-    'المرفقات المرتبطة بهذا اللقاء: ورقة عمل، ونموذج التقييم الذاتي، وفيديو تكميلي قصير.',
-    'الأسئلة الشائعة: كيف أحصل على شهادة حضور؟ هل يمكن مشاهدة اللقاء أكثر من مرة؟ كيف أرسل سؤالًا للمدرب لاحقًا؟',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await MeetingsApi.instance.recording(widget.meetingId);
+      if (!mounted) return;
+      setState(() {
+        _recording = data;
+        _loading = false;
+        if (data == null) _error = 'لا يوجد تسجيل متاح لهذا اللقاء بعد';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'تعذر تحميل التسجيل';
+        _loading = false;
+      });
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final meeting = context.read<AppState>().meetings.firstWhere(
-          (m) => m.id == widget.meetingId,
-          orElse: () => MockData.meetings().first,
-        );
-    final views = _views[meeting.id] ?? 120;
-    final tags = _tags[meeting.id] ?? const ['الهندسة', 'الإبداع'];
-    final summary = _summaries[meeting.id] ?? _defaultSummary;
+    if (_loading) {
+      return const Scaffold(backgroundColor: Colors.white, body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    }
+    if (_error != null || _recording == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: StateMessage(
+            icon: Text('!', style: tj(40, color: AppColors.coral)),
+            iconBg: AppColors.dangerBg,
+            title: _error ?? 'لا يوجد تسجيل',
+            subtitle: '',
+          ),
+        ),
+      );
+    }
+
+    final recording = _recording!;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -77,7 +104,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                     top: 36,
                     left: 30,
                     child: Text(
-                      'لمى ع. #4821 • ${meeting.recordingLength ?? ''}',
+                      _formatDuration(recording.durationSeconds),
                       style: tj(9, weight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.3)),
                     ),
                   ),
@@ -127,9 +154,9 @@ class _RecordingScreenState extends State<RecordingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(meeting.title, style: tj(16, weight: FontWeight.w800, color: AppColors.textHeading)),
+                    Text(recording.title, style: tj(16, weight: FontWeight.w800, color: AppColors.textHeading)),
                     const SizedBox(height: 6),
-                    Text('${meeting.teacher} • ${meeting.timeLabel} • $views مشاهدة', style: tj(11, color: AppColors.textFaint)),
+                    Text('${recording.views} مشاهدة', style: tj(11, color: AppColors.textFaint)),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -161,51 +188,6 @@ class _RecordingScreenState extends State<RecordingScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(child: _ActionPill(icon: IconBodies.starFilled, label: 'مفضلة', filled: true)),
-                        const SizedBox(width: 10),
-                        Expanded(child: _ActionPill(icon: IconBodies.pencil, label: 'ملاحظاتي')),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        for (var i = 0; i < 3; i++)
-                          GestureDetector(
-                            onTap: () => setState(() => _tab = i),
-                            child: Container(
-                              margin: const EdgeInsets.only(left: 16),
-                              padding: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                border: Border(bottom: BorderSide(color: _tab == i ? AppColors.primary : Colors.transparent, width: 2)),
-                              ),
-                              child: Text(
-                                ['ملخص اللقاء', 'الأنشطة المرتبطة', 'الأسئلة الشائعة'][i],
-                                style: tj(12, weight: _tab == i ? FontWeight.w700 : FontWeight.w400, color: _tab == i ? AppColors.primary : AppColors.textFaint),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const Divider(height: 20, color: AppColors.divider),
-                    Text(_tab == 0 ? summary : _tabContent[_tab], style: tj(11, color: AppColors.textMuted, height: 1.8)),
-                    if (_tab == 0) ...[
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          for (final tag in tags) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                              decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(8)),
-                              child: Text(tag, style: tj(9, weight: FontWeight.w500, color: AppColors.primary)),
-                            ),
-                            if (tag != tags.last) const SizedBox(width: 8),
-                          ],
-                        ],
-                      ),
-                    ],
                     const SizedBox(height: 14),
                     Container(
                       width: double.infinity,
@@ -224,40 +206,6 @@ class _RecordingScreenState extends State<RecordingScreen> {
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ActionPill extends StatefulWidget {
-  final String icon;
-  final String label;
-  final bool filled;
-  const _ActionPill({required this.icon, required this.label, this.filled = false});
-
-  @override
-  State<_ActionPill> createState() => _ActionPillState();
-}
-
-class _ActionPillState extends State<_ActionPill> {
-  late bool _active = widget.filled;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => setState(() => _active = !_active),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(color: AppColors.inputFill, borderRadius: BorderRadius.circular(10)),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(widget.icon, size: 13, color: AppColors.textMuted, filled: widget.icon == IconBodies.starFilled && _active, strokeWidth: 1.8),
-            const SizedBox(width: 5),
-            Text(widget.label, style: tj(11, weight: FontWeight.w600, color: AppColors.textMuted)),
           ],
         ),
       ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/models.dart';
 import '../state/app_state.dart';
 
 /// Wraps the 5 screens the design gives explicit loading/empty/(error)

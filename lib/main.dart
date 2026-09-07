@@ -14,10 +14,10 @@ class AlefApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AppState(),
+      create: (_) => AppState()..bootstrap(),
       child: Builder(
         builder: (context) {
-          final router = buildAppRouter(context.read<AppState>());
+          final router = buildAppRouter(context.watch<AppState>());
           return MaterialApp.router(
             title: 'ألف المستقبل',
             debugShowCheckedModeBanner: false,

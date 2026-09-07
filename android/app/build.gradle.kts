@@ -19,6 +19,8 @@ android {
         applicationId = "com.alef.alef_mobile_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Agora RTC SDK (agora_rtc_engine) only requires API 21+, same as
+        // Flutter's own default — no override needed here.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

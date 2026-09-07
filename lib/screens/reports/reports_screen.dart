@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../data/mock_data.dart';
+import '../../services/reports_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/misc.dart';
@@ -13,8 +13,36 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  int _tab = 0;
-  static const _tabs = ['الشهرية', 'الفصلية', 'الختامية'];
+  bool _loading = true;
+  String? _error;
+  StudentReportSummary? _report;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await ReportsApi.instance.myReport();
+      if (!mounted) return;
+      setState(() {
+        _report = data;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'تعذر تحميل التقرير';
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,104 +50,62 @@ class _ReportsScreenState extends State<ReportsScreen> {
       backgroundColor: AppColors.screenBg,
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-          children: [
-            Text('التقارير', style: tj(20, weight: FontWeight.w800, color: AppColors.textHeading)),
-            const SizedBox(height: 12),
-            Row(
-              children: const [
-                Expanded(child: StatTile(value: '91%', label: 'متوسط الأداء', valueColor: AppColors.primary, valueSize: 16, labelSize: 9)),
-                SizedBox(width: 8),
-                Expanded(child: StatTile(value: '96%', label: 'الحضور', valueColor: AppColors.sky, valueSize: 16, labelSize: 9)),
-                SizedBox(width: 8),
-                Expanded(child: StatTile(value: '12', label: 'الإنجازات', valueColor: AppColors.warning, valueSize: 16, labelSize: 9)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('نشاط آخر 7 أيام', style: tj(11, weight: FontWeight.w700, color: AppColors.textHeading)),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 72,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        for (var i = 0; i < MockData.weeklyActivity.length; i++)
-                          Container(
-                            width: 26,
-                            height: 72 * MockData.weeklyActivity[i],
-                            decoration: BoxDecoration(
-                              color: i == 2 || i == 5 ? AppColors.primary : AppColors.border,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      for (final d in MockData.weekDayLabels) Text(d, style: tj(8, color: AppColors.textDisabled)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                for (var i = 0; i < _tabs.length; i++)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 16),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _tab = i),
-                      child: Container(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: _tab == i ? AppColors.primary : Colors.transparent, width: 2))),
-                        child: Text(_tabs[i], style: tj(12, weight: _tab == i ? FontWeight.w700 : FontWeight.w400, color: _tab == i ? AppColors.primary : AppColors.textFaint)),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            for (final r in MockData.monthlyReports) ...[
-              GestureDetector(
-                onTap: () => context.push('/report/r1'),
-                child: AppCard(
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(color: AppColors.dangerBg, borderRadius: BorderRadius.circular(9)),
-                        alignment: Alignment.center,
-                        child: Text('PDF', style: tj(14, color: AppColors.coral)),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : _error != null
+                ? StateMessage(
+                    icon: Text('!', style: tj(40, color: AppColors.coral)),
+                    iconBg: AppColors.dangerBg,
+                    title: 'تعذر تحميل التقرير',
+                    subtitle: 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى',
+                    actionLabel: 'إعادة المحاولة',
+                    onAction: _load,
+                  )
+                : _report == null
+                    ? StateMessage(
+                        icon: Text('!', style: tj(40, color: AppColors.textFaint)),
+                        iconBg: AppColors.inputFill,
+                        title: 'لا يوجد تقرير بعد',
+                        subtitle: 'سيظهر تقريرك هنا بعد إكمال بعض الواجبات واللقاءات',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
                           children: [
-                            Text(r.title, style: tj(12, weight: FontWeight.w700, color: AppColors.textBody)),
-                            Text(r.meta, style: tj(10, color: AppColors.textFaint)),
+                            Text('التقارير', style: tj(20, weight: FontWeight.w800, color: AppColors.textHeading)),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(child: StatTile(value: '${_report!.average}%', label: 'متوسط الأداء', valueColor: AppColors.primary, valueSize: 16, labelSize: 9)),
+                                const SizedBox(width: 8),
+                                Expanded(child: StatTile(value: '${_report!.attendancePercent}%', label: 'الحضور', valueColor: AppColors.sky, valueSize: 16, labelSize: 9)),
+                                const SizedBox(width: 8),
+                                Expanded(child: StatTile(value: '${_report!.points}', label: 'النقاط', valueColor: AppColors.warning, valueSize: 16, labelSize: 9)),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            GestureDetector(
+                              onTap: () => context.push('/report/me'),
+                              child: AppCard(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('التقرير التفصيلي', style: tj(12, weight: FontWeight.w700, color: AppColors.textBody)),
+                                          Text('${_report!.submissions.length} واجب مسلّم', style: tj(10, color: AppColors.textFaint)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ],
-        ),
       ),
     );
   }

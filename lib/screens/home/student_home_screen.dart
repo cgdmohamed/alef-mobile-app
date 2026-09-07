@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../models/models.dart';
+import '../../services/assignments_api.dart';
+import '../../services/home_api.dart';
+import '../../services/meetings_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
@@ -31,14 +33,69 @@ class StudentHomeScreen extends StatelessWidget {
   }
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
   const _HomeContent();
 
   @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  StudentHomeData? _home;
+  List<ApiAssignment> _assignments = [];
+  List<ApiMeeting> _recordings = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final results = await Future.wait([
+        HomeApi.instance.studentHome(),
+        AssignmentsApi.instance.myAssignments(),
+        MeetingsApi.instance.list(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _home = results[0] as StudentHomeData?;
+        _assignments = results[1] as List<ApiAssignment>;
+        _recordings = (results[2] as List<ApiMeeting>).where((m) => m.status == 'ended').take(3).toList();
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'تعذر تحميل البيانات';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
-    final upcoming = appState.assignments.where((a) => a.status == AssignmentStatus.inProgress).take(3).toList();
-    final recordings = appState.meetings.where((m) => m.status == MeetingStatus.ended).take(3).toList();
+    if (_loading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    if (_error != null) {
+      return StateMessage(
+        icon: Text('!', style: tj(40, color: AppColors.coral)),
+        iconBg: AppColors.dangerBg,
+        title: 'تعذر تحميل البيانات',
+        subtitle: 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى',
+        actionLabel: 'إعادة المحاولة',
+        onAction: _load,
+      );
+    }
+
+    final upcoming = _assignments.where((a) => a.submissionStatus == null || a.submissionStatus == 'in_progress').take(3).toList();
+    final nextMeeting = _home?.nextMeeting;
 
     return Column(
       children: [
@@ -53,7 +110,7 @@ class _HomeContent extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('صباح الخير', style: tj(13, color: AppColors.textFaint)),
-                    Text('لمى عبدالله', style: tj(19, weight: FontWeight.w800, color: AppColors.textHeading)),
+                    Text(_home?.studentName ?? '', style: tj(19, weight: FontWeight.w800, color: AppColors.textHeading)),
                   ],
                 ),
               ),
@@ -63,7 +120,7 @@ class _HomeContent extends StatelessWidget {
                   const SizedBox(width: 12),
                   GestureDetector(
                     onTap: () => context.go('/profile'),
-                    child: const AvatarPlaceholder(size: 38, photoAsset: 'assets/avatars/lama.png'),
+                    child: const AvatarPlaceholder(size: 38),
                   ),
                 ],
               ),
@@ -71,80 +128,88 @@ class _HomeContent extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _LiveMeetingHero(),
-                const SizedBox(height: 16),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 1.7,
-                  children: const [
-                    StatTile(value: '3', label: 'واجبات معلقة', valueColor: AppColors.coral),
-                    StatTile(value: '96%', label: 'نسبة الحضور', valueColor: AppColors.sky),
-                    StatTile(value: '12', label: 'الإنجازات', valueColor: AppColors.primary),
-                    StatTile(value: '4.8', label: 'التقييم العام', valueColor: AppColors.warning),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text('الواجبات القادمة', style: tj(13, weight: FontWeight.w700, color: AppColors.textHeading)),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 96,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: upcoming.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 10),
-                    itemBuilder: (context, i) {
-                      final a = upcoming[i];
-                      return SizedBox(
-                        width: 130,
-                        child: GestureDetector(
-                          onTap: () => context.push('/assignment/${a.id}'),
-                          child: AppCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  a.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: tj(12, weight: FontWeight.w700, color: AppColors.textBody),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(a.dueLabel, style: tj(10, color: AppColors.textFaint)),
-                                const SizedBox(height: 8),
-                                ProgressTrack(value: a.progress == 0 ? 0.2 : a.progress),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (nextMeeting != null) _LiveMeetingHero(meeting: nextMeeting),
+                  if (nextMeeting != null) const SizedBox(height: 16),
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.7,
+                    children: [
+                      StatTile(value: '${_home?.pendingAssignments.length ?? 0}', label: 'واجبات معلقة', valueColor: AppColors.coral),
+                      StatTile(value: '${_home?.unreadNotifications ?? 0}', label: 'إشعارات جديدة', valueColor: AppColors.sky),
+                      StatTile(value: '${_home?.points ?? 0}', label: 'النقاط', valueColor: AppColors.primary),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text('التسجيلات السابقة', style: tj(13, weight: FontWeight.w700, color: AppColors.textHeading)),
-                const SizedBox(height: 8),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 2.4,
-                  children: [
-                    for (final m in recordings)
-                      _RecordingTile(id: m.id, title: m.title, length: m.recordingLength ?? ''),
-                  ],
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Text('الواجبات القادمة', style: tj(13, weight: FontWeight.w700, color: AppColors.textHeading)),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 96,
+                    child: upcoming.isEmpty
+                        ? Center(child: Text('لا توجد واجبات حالية', style: tj(12, color: AppColors.textFaint)))
+                        : ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: upcoming.length,
+                            separatorBuilder: (_, _) => const SizedBox(width: 10),
+                            itemBuilder: (context, i) {
+                              final a = upcoming[i];
+                              return SizedBox(
+                                width: 130,
+                                child: GestureDetector(
+                                  onTap: () => context.push('/assignment/${a.id}'),
+                                  child: AppCard(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          a.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: tj(12, weight: FontWeight.w700, color: AppColors.textBody),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${a.dueAt.day}/${a.dueAt.month}',
+                                          style: tj(10, color: AppColors.textFaint),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('التسجيلات السابقة', style: tj(13, weight: FontWeight.w700, color: AppColors.textHeading)),
+                  const SizedBox(height: 8),
+                  if (_recordings.isEmpty)
+                    Text('لا توجد تسجيلات بعد', style: tj(12, color: AppColors.textFaint))
+                  else
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 2.4,
+                      children: [
+                        for (final m in _recordings) _RecordingTile(id: m.id, title: m.title),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -154,10 +219,14 @@ class _HomeContent extends StatelessWidget {
 }
 
 class _LiveMeetingHero extends StatelessWidget {
-  const _LiveMeetingHero();
+  final Map<String, dynamic> meeting;
+  const _LiveMeetingHero({required this.meeting});
 
   @override
   Widget build(BuildContext context) {
+    final title = meeting['title'] as String? ?? '';
+    final id = meeting['id'] as String? ?? '';
+    final teacherName = (meeting['classEntity'] as Map<String, dynamic>?)?['teacher']?['name'] as String?;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(gradient: AppColors.heroGradient, borderRadius: BorderRadius.circular(18)),
@@ -166,26 +235,22 @@ class _LiveMeetingHero extends StatelessWidget {
         children: [
           Text('لقاء اليوم', style: tj(11, weight: FontWeight.w500, color: const Color(0xFFC7C4EF))),
           const SizedBox(height: 6),
-          Text('أساسيات الهندسة الإبداعية', style: tj(16, weight: FontWeight.w800, color: Colors.white)),
+          Text(title, style: tj(16, weight: FontWeight.w800, color: Colors.white)),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              const AppIcon(IconBodies.clock, size: 12, color: Color(0xFFDEDCF9), strokeWidth: 1.8),
-              const SizedBox(width: 4),
-              Text('5:00 م', style: tj(12, color: const Color(0xFFDEDCF9))),
-              const SizedBox(width: 8),
-              Text('•', style: tj(12, color: const Color(0xFFDEDCF9))),
-              const SizedBox(width: 8),
-              Text('أ. سلطان العتيبي', style: tj(12, color: const Color(0xFFDEDCF9))),
-            ],
-          ),
+          if (teacherName != null)
+            Row(
+              children: [
+                const AppIcon(IconBodies.clock, size: 12, color: Color(0xFFDEDCF9), strokeWidth: 1.8),
+                const SizedBox(width: 4),
+                Text(teacherName, style: tj(12, color: const Color(0xFFDEDCF9))),
+              ],
+            ),
           const SizedBox(height: 10),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text('بعد ساعة و20 دقيقة', style: tj(11, weight: FontWeight.w600, color: AppColors.gold)),
               GestureDetector(
-                onTap: () => context.push('/meeting/live/m1'),
+                onTap: () => context.push('/meeting/live/$id'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
@@ -203,8 +268,7 @@ class _LiveMeetingHero extends StatelessWidget {
 class _RecordingTile extends StatelessWidget {
   final String id;
   final String title;
-  final String length;
-  const _RecordingTile({required this.id, required this.title, required this.length});
+  const _RecordingTile({required this.id, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +291,7 @@ class _RecordingTile extends StatelessWidget {
               left: 0,
               bottom: 0,
               child: Text(
-                '$title • $length',
+                title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.right,

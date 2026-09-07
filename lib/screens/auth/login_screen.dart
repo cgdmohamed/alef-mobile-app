@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../models/models.dart';
-import '../../state/app_state.dart';
+import '../../services/auth_api.dart';
+import '../../services/api_client.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/buttons.dart';
 import 'widgets/auth_text_field.dart';
+import 'otp_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,22 +16,32 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _email = TextEditingController(text: 'sara.ahmed@email.com');
-  final _password = TextEditingController(text: '••••••••••');
-  bool _obscure = true;
-  bool _rememberMe = true;
-  UserRole _role = UserRole.student;
+  final _phone = TextEditingController();
+  bool _sending = false;
+  String? _error;
 
   @override
   void dispose() {
-    _email.dispose();
-    _password.dispose();
+    _phone.dispose();
     super.dispose();
   }
 
-  void _login() {
-    context.read<AppState>().setRole(_role);
-    context.go('/home');
+  Future<void> _requestOtp() async {
+    final phone = _phone.text.trim();
+    if (phone.isEmpty) return;
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      await AuthApi.instance.requestOtp(phone);
+      if (!mounted) return;
+      context.push('/forgot-password', extra: {'phone': phone, 'purpose': OtpPurpose.login});
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   @override
@@ -51,58 +61,26 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 22),
               Text('مرحبًا بعودتك', style: tj(26, weight: FontWeight.w800, color: AppColors.textHeading)),
               const SizedBox(height: 6),
-              Text('سجّل دخولك لمتابعة رحلتك التعليمية', style: tj(14, color: AppColors.textMuted)),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(child: _RoleTab(label: 'طالب', selected: _role == UserRole.student, onTap: () => setState(() => _role = UserRole.student))),
-                  const SizedBox(width: 10),
-                  Expanded(child: _RoleTab(label: 'ولي أمر', selected: _role == UserRole.parent, onTap: () => setState(() => _role = UserRole.parent))),
-                ],
-              ),
-              const SizedBox(height: 20),
-              AuthTextField(label: 'البريد الإلكتروني', controller: _email),
-              const SizedBox(height: 14),
-              AuthTextField(
-                label: 'كلمة السر',
-                controller: _password,
-                obscure: _obscure,
-                trailing: GestureDetector(
-                  onTap: () => setState(() => _obscure = !_obscure),
-                  child: Text(_obscure ? 'إظهار' : 'إخفاء', style: tj(12, color: AppColors.primary)),
+              Text('أدخل رقم جوالك لتسجيل الدخول برمز تحقق', style: tj(14, color: AppColors.textMuted)),
+              const SizedBox(height: 24),
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(color: AppColors.dangerBg, borderRadius: BorderRadius.circular(10)),
+                  child: Text(_error!, style: tj(12, color: AppColors.coral)),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () => setState(() => _rememberMe = !_rememberMe),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: _rememberMe ? AppColors.primary : Colors.transparent,
-                            border: _rememberMe ? null : Border.all(color: AppColors.border, width: 1.5),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text('تذكرني', style: tj(12, color: AppColors.textMuted)),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => context.push('/forgot-password'),
-                    child: Text('نسيت كلمة السر؟', style: tj(12, weight: FontWeight.w500, color: AppColors.primary)),
-                  ),
-                ],
+                const SizedBox(height: 14),
+              ],
+              AuthTextField(
+                label: 'رقم الجوال',
+                controller: _phone,
+                keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 24),
-              PrimaryButton(label: 'تسجيل الدخول', onTap: _login),
+              PrimaryButton(
+                label: _sending ? 'جارٍ الإرسال...' : 'إرسال رمز التحقق',
+                onTap: _sending ? null : _requestOtp,
+              ),
               const SizedBox(height: 22),
               Row(
                 children: [
@@ -133,29 +111,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _RoleTab extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _RoleTab({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.inputFill,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        alignment: Alignment.center,
-        child: Text(label, style: tj(12, weight: FontWeight.w700, color: selected ? Colors.white : AppColors.textMuted)),
       ),
     );
   }

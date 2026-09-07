@@ -1,30 +1,98 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../models/models.dart';
-import '../../state/app_state.dart';
+import 'package:no_screenshot/overlay_mode.dart';
+import 'package:no_screenshot/secure_widget.dart';
+import '../../services/assignments_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
 
 /// Dispatches to the quiz / essay / puzzle work UI (design screens 13/14/15)
-/// based on the assignment's [AssignmentKind] — each is a distinct layout
-/// in the source design, not variants of one screen.
-class AssignmentWorkScreen extends StatelessWidget {
+/// based on the assignment's kind — each is a distinct layout in the source
+/// design, not variants of one screen.
+///
+/// The backend only stores a generic `answerPayload` blob per submission —
+/// there is no real question/puzzle content bank, so the quiz questions,
+/// essay prompt, and puzzle shapes below stay local UI fixtures. Only the
+/// final submit action is wired to the real API.
+class AssignmentWorkScreen extends StatefulWidget {
   final String assignmentId;
   const AssignmentWorkScreen({super.key, required this.assignmentId});
 
   @override
+  State<AssignmentWorkScreen> createState() => _AssignmentWorkScreenState();
+}
+
+class _AssignmentWorkScreenState extends State<AssignmentWorkScreen> {
+  ApiAssignment? _assignment;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final all = await AssignmentsApi.instance.myAssignments();
+      final found = all.where((a) => a.id == widget.assignmentId).cast<ApiAssignment?>().firstWhere((a) => a != null, orElse: () => null);
+      if (!mounted) return;
+      setState(() {
+        _assignment = found;
+        _loading = false;
+        if (found == null) _error = 'تعذر العثور على الواجب';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'تعذر تحميل الواجب';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final assignment = context.read<AppState>().assignments.firstWhere((a) => a.id == assignmentId);
+    return SecureWidget(mode: OverlayMode.secure, child: _buildContent());
+  }
+
+  Widget _buildContent() {
+    if (_loading) {
+      return const Scaffold(backgroundColor: Colors.white, body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    }
+    if (_error != null || _assignment == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: StateMessage(
+            icon: Text('!', style: tj(40, color: AppColors.coral)),
+            iconBg: AppColors.dangerBg,
+            title: _error ?? 'تعذر تحميل الواجب',
+            subtitle: '',
+          ),
+        ),
+      );
+    }
+    final assignment = _assignment!;
     return switch (assignment.kind) {
-      AssignmentKind.quiz => _QuizWork(assignment: assignment),
-      AssignmentKind.essay => _EssayWork(assignment: assignment),
-      AssignmentKind.puzzle => _PuzzleWork(assignment: assignment),
+      'essay' => _EssayWork(assignment: assignment),
+      'puzzle' => _PuzzleWork(assignment: assignment),
+      _ => _QuizWork(assignment: assignment),
     };
   }
+}
+
+Future<void> _submitAndGoToResult(BuildContext context, String assignmentId, Map<String, dynamic> payload) async {
+  try {
+    await AssignmentsApi.instance.submit(assignmentId, payload);
+  } catch (_) {
+    // best-effort — still show the result screen, which will report "pending" if the submit didn't register
+  }
+  if (context.mounted) context.go('/assignment/$assignmentId/result');
 }
 
 class _WorkHeader extends StatelessWidget {
@@ -59,7 +127,7 @@ class _WorkHeader extends StatelessWidget {
 // ---------------------------------------------------------------- Quiz ----
 
 class _QuizWork extends StatefulWidget {
-  final Assignment assignment;
+  final ApiAssignment assignment;
   const _QuizWork({required this.assignment});
 
   @override
@@ -70,10 +138,12 @@ class _QuizWorkState extends State<_QuizWork> {
   static const _questions = [
     ('ما ناتج جمع 7/12 + 5/12؟', ['١', '1/2', '12/24', '7/5'], 0),
   ];
-  int _index = 2; // "السؤال 3 من 10" per design
-  int? _selected = 0;
+  int _index = 0;
+  int? _selected;
+  final List<int?> _answers = [null];
   Timer? _timer;
   int _seconds = 14 * 60 + 52;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -89,14 +159,17 @@ class _QuizWorkState extends State<_QuizWork> {
     super.dispose();
   }
 
-  void _next() {
-    if (_index >= 9) {
-      context.go('/assignment/${widget.assignment.id}/result');
+  Future<void> _next() async {
+    _answers[_index] = _selected;
+    if (_index >= _questions.length - 1) {
+      if (_submitting) return;
+      setState(() => _submitting = true);
+      await _submitAndGoToResult(context, widget.assignment.id, {'answers': _answers});
       return;
     }
     setState(() {
       _index++;
-      _selected = null;
+      _selected = _answers.length > _index ? _answers[_index] : null;
     });
   }
 
@@ -118,12 +191,11 @@ class _QuizWorkState extends State<_QuizWork> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('السؤال ${_index + 1} من 10', style: tj(11, weight: FontWeight.w600, color: AppColors.textFaint)),
-                        Text('★★☆', style: tj(12, color: AppColors.warning)),
+                        Text('السؤال ${_index + 1} من ${_questions.length}', style: tj(11, weight: FontWeight.w600, color: AppColors.textFaint)),
                       ],
                     ),
                     const SizedBox(height: 10),
-                    ProgressTrack(value: (_index + 1) / 10),
+                    ProgressTrack(value: (_index + 1) / _questions.length),
                     const SizedBox(height: 16),
                     Text(q.$1, style: tj(17, weight: FontWeight.w700, color: AppColors.textHeading, height: 1.6)),
                     const SizedBox(height: 16),
@@ -157,16 +229,19 @@ class _QuizWorkState extends State<_QuizWork> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: _index > 0 ? () => setState(() => _index--) : null,
+                    onTap: _index > 0 ? () => setState(() { _answers[_index] = _selected; _index--; _selected = _answers[_index]; }) : null,
                     child: Text('السابق', style: tj(12, weight: FontWeight.w600, color: _index > 0 ? AppColors.textFaint : AppColors.border)),
                   ),
                   Text('✓ تم الحفظ', style: tj(10, color: AppColors.success)),
                   GestureDetector(
-                    onTap: _next,
+                    onTap: _submitting ? null : _next,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
                       decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(10)),
-                      child: Text('التالي', style: tj(12, weight: FontWeight.w700, color: Colors.white)),
+                      child: Text(
+                        _index >= _questions.length - 1 ? (_submitting ? 'جارٍ التسليم...' : 'إنهاء') : 'التالي',
+                        style: tj(12, weight: FontWeight.w700, color: Colors.white),
+                      ),
                     ),
                   ),
                 ],
@@ -182,7 +257,7 @@ class _QuizWorkState extends State<_QuizWork> {
 // --------------------------------------------------------------- Essay ----
 
 class _EssayWork extends StatefulWidget {
-  final Assignment assignment;
+  final ApiAssignment assignment;
   const _EssayWork({required this.assignment});
 
   @override
@@ -190,11 +265,10 @@ class _EssayWork extends StatefulWidget {
 }
 
 class _EssayWorkState extends State<_EssayWork> {
-  final _controller = TextEditingController(
-    text: 'في هذا المشروع قمت بدراسة تأثير الضوء على نمو النباتات، حيث لاحظت أن...',
-  );
+  final _controller = TextEditingController();
   Timer? _timer;
   int _seconds = 18 * 60 + 20;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -213,6 +287,12 @@ class _EssayWorkState extends State<_EssayWork> {
   }
 
   int get _wordCount => _controller.text.trim().isEmpty ? 0 : _controller.text.trim().split(RegExp(r'\s+')).length;
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    await _submitAndGoToResult(context, widget.assignment.id, {'text': _controller.text});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -276,26 +356,6 @@ class _EssayWorkState extends State<_EssayWork> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    GestureDetector(
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرفاق الملف'))),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(11),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFFC7C4EF), width: 1.5),
-                          borderRadius: BorderRadius.circular(11),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.attach_file, size: 14, color: AppColors.textFaint),
-                            const SizedBox(width: 6),
-                            Text('إرفاق ملف PDF / Word', style: tj(11, color: AppColors.textFaint)),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -306,21 +366,12 @@ class _EssayWorkState extends State<_EssayWork> {
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlineButton(
-                      label: 'معاينة',
-                      padding: const EdgeInsets.symmetric(vertical: 11),
-                      fontSize: 12,
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('معاينة التقرير'))),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
                     child: PrimaryButton(
-                      label: 'تسليم',
+                      label: _submitting ? 'جارٍ التسليم...' : 'تسليم',
                       shadow: false,
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       fontSize: 12,
-                      onTap: () => context.go('/assignment/${widget.assignment.id}/result'),
+                      onTap: _submitting ? null : _submit,
                     ),
                   ),
                 ],
@@ -336,7 +387,7 @@ class _EssayWorkState extends State<_EssayWork> {
 // -------------------------------------------------------------- Puzzle ----
 
 class _PuzzleWork extends StatefulWidget {
-  final Assignment assignment;
+  final ApiAssignment assignment;
   const _PuzzleWork({required this.assignment});
 
   @override
@@ -344,9 +395,10 @@ class _PuzzleWork extends StatefulWidget {
 }
 
 class _PuzzleWorkState extends State<_PuzzleWork> {
-  int? _selected = 0;
+  int? _selected;
   Timer? _timer;
   int _seconds = 8 * 60 + 41;
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -360,6 +412,12 @@ class _PuzzleWorkState extends State<_PuzzleWork> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    await _submitAndGoToResult(context, widget.assignment.id, {'selected': _selected});
   }
 
   @override
@@ -425,23 +483,12 @@ class _PuzzleWorkState extends State<_PuzzleWork> {
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlineButton(
-                      label: '💡 تلميح',
-                      color: AppColors.textMuted,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
-                      fontSize: 12,
-                      onTap: () => ScaffoldMessenger.of(context)
-                          .showSnackBar(const SnackBar(content: Text('لاحظ نمط الدوران والتحول بين الأشكال'))),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
                     child: PrimaryButton(
-                      label: 'تسليم',
+                      label: _submitting ? 'جارٍ التسليم...' : 'تسليم',
                       shadow: false,
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       fontSize: 12,
-                      onTap: () => context.go('/assignment/${widget.assignment.id}/result'),
+                      onTap: (_submitting || _selected == null) ? null : _submit,
                     ),
                   ),
                 ],

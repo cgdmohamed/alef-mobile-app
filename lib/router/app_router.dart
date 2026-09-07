@@ -22,16 +22,40 @@ import '../screens/profile/notifications_screen.dart';
 import '../screens/support/support_screen.dart';
 import '../state/app_state.dart';
 
+const _publicPaths = {'/splash', '/onboarding', '/login', '/signup', '/forgot-password'};
+
 GoRouter buildAppRouter(AppState appState) {
   return GoRouter(
     initialLocation: '/splash',
+    refreshListenable: appState,
+    redirect: (context, state) {
+      final path = state.matchedLocation;
+      if (appState.authLoading || path == '/splash') return null;
+
+      final isPublic = _publicPaths.contains(path);
+      if (!appState.isAuthenticated && !isPublic) return '/login';
+      if (appState.isAuthenticated && (path == '/login' || path == '/signup')) return '/home';
+      return null;
+    },
     routes: [
       GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (context, state) => const SignupScreen()),
-      GoRoute(path: '/forgot-password', builder: (context, state) => const OtpScreen()),
-      GoRoute(path: '/parent-consent', builder: (context, state) => const ParentConsentScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return OtpScreen(
+            phone: extra?['phone'] as String? ?? '',
+            purpose: extra?['purpose'] as OtpPurpose? ?? OtpPurpose.login,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/parent-consent',
+        builder: (context, state) => ParentConsentScreen(studentId: state.extra as String?),
+      ),
       GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       GoRoute(path: '/achievements', builder: (context, state) => const AchievementsScreen()),

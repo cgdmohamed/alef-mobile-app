@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
-import '../../models/models.dart';
-import '../../state/app_state.dart';
+import '../../services/achievements_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/misc.dart';
 import '../../widgets/section_state.dart';
+import '../../state/app_state.dart';
 
 class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({super.key});
@@ -26,37 +25,68 @@ class AchievementsScreen extends StatelessWidget {
   }
 }
 
-class _AchievementsContent extends StatelessWidget {
+class _AchievementsContent extends StatefulWidget {
   const _AchievementsContent();
 
   @override
+  State<_AchievementsContent> createState() => _AchievementsContentState();
+}
+
+class _AchievementsContentState extends State<_AchievementsContent> {
+  bool _loading = true;
+  String? _error;
+  List<ApiBadge> _badges = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await AchievementsApi.instance.myAchievements();
+      if (!mounted) return;
+      setState(() {
+        _badges = data;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'تعذر تحميل الإنجازات';
+        _loading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    if (_error != null) {
+      return StateMessage(
+        icon: Text('!', style: tj(40, color: AppColors.coral)),
+        iconBg: AppColors.dangerBg,
+        title: 'تعذر تحميل الإنجازات',
+        subtitle: 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى',
+        actionLabel: 'إعادة المحاولة',
+        onAction: _load,
+      );
+    }
+
+    final unlocked = _badges.where((b) => !b.locked).length;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('12 من 30', style: tj(12, weight: FontWeight.w600, color: AppColors.textFaint)),
+            Text('$unlocked من ${_badges.length}', style: tj(12, weight: FontWeight.w600, color: AppColors.textFaint)),
           ],
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(gradient: AppColors.leaderboardGradient, borderRadius: BorderRadius.circular(14)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('المستوى الحالي', style: tj(10, color: const Color(0xFFDEDCF9))),
-                  Text('مستوى 5 — نجم صاعد', style: tj(16, weight: FontWeight.w800, color: Colors.white)),
-                ],
-              ),
-              Text('2,340', style: tj(20, weight: FontWeight.w800, color: Colors.white)),
-            ],
-          ),
         ),
         const SizedBox(height: 14),
         GridView.count(
@@ -66,55 +96,7 @@ class _AchievementsContent extends StatelessWidget {
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
           childAspectRatio: 0.95,
-          children: [for (final b in MockData.badges) _BadgeTile(badge: b)],
-        ),
-        const SizedBox(height: 16),
-        Text('شارات قريبة', style: tj(12, weight: FontWeight.w700, color: AppColors.textHeading)),
-        const SizedBox(height: 8),
-        AppCard(
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(color: AppColors.warningBg, borderRadius: BorderRadius.circular(10)),
-                alignment: Alignment.center,
-                child: const Text('⭐', style: TextStyle(fontSize: 18)),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('بطل الحضور', style: tj(11, weight: FontWeight.w700, color: AppColors.textBody)),
-                    Text('احضر لقاءين إضافيين لفتحها', style: tj(9, color: AppColors.textFaint)),
-                    const SizedBox(height: 5),
-                    const ProgressTrack(value: 0.7, color: AppColors.warning, height: 5),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('قائمة المتفوقين — الفصل', style: tj(12, weight: FontWeight.w700, color: AppColors.textHeading)),
-            Text('الأسبوعي', style: tj(9, weight: FontWeight.w500, color: AppColors.primary)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        AppCard(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Column(
-            children: [
-              for (final e in MockData.leaderboard) ...[
-                _LeaderRow(entry: e),
-                if (e != MockData.leaderboard.last) const SizedBox(height: 8),
-              ],
-            ],
-          ),
+          children: [for (final b in _badges) _BadgeTile(badge: b)],
         ),
       ],
     );
@@ -122,7 +104,7 @@ class _AchievementsContent extends StatelessWidget {
 }
 
 class _BadgeTile extends StatelessWidget {
-  final AchievementBadge badge;
+  final ApiBadge badge;
   const _BadgeTile({required this.badge});
 
   @override
@@ -144,37 +126,6 @@ class _BadgeTile extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _LeaderRow extends StatelessWidget {
-  final LeaderboardEntry entry;
-  const _LeaderRow({required this.entry});
-
-  static const _rankColors = {1: AppColors.warning, 2: AppColors.textDisabled, 3: AppColors.orangeAccent};
-
-  @override
-  Widget build(BuildContext context) {
-    final isTop = entry.rank == 1;
-    return Row(
-      children: [
-        SizedBox(
-          width: 14,
-          child: Text('${entry.rank}', style: tj(11, weight: FontWeight.w800, color: _rankColors[entry.rank])),
-        ),
-        const SizedBox(width: 8),
-        AvatarPlaceholder(
-          size: 26,
-          color: entry.color,
-          photoAsset: isTop ? 'assets/avatars/lama.png' : null,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(entry.name, style: tj(11, weight: isTop ? FontWeight.w700 : FontWeight.w400, color: AppColors.textBody)),
-        ),
-        Text('${entry.points}', style: tj(10, weight: FontWeight.w700, color: isTop ? AppColors.primary : AppColors.textFaint)),
-      ],
     );
   }
 }

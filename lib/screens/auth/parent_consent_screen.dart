@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/auth_api.dart';
+import '../../services/api_client.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
 
 class ParentConsentScreen extends StatefulWidget {
-  const ParentConsentScreen({super.key});
+  final String? studentId;
+  const ParentConsentScreen({super.key, this.studentId});
 
   @override
   State<ParentConsentScreen> createState() => _ParentConsentScreenState();
@@ -15,17 +18,32 @@ class ParentConsentScreen extends StatefulWidget {
 class _ParentConsentScreenState extends State<ParentConsentScreen> {
   bool _shareResults = true;
   bool _recordSessions = true;
+  bool _submitting = false;
   final List<Offset?> _strokePoints = [];
 
   bool get _signed => _strokePoints.isNotEmpty;
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_signed) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى التوقيع أولًا لإتمام الموافقة')));
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ موافقة ولي الأمر بنجاح')));
-    context.go('/login');
+    final studentId = widget.studentId;
+    if (studentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر تحديد الطالب المطلوب الموافقة عليه')));
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await AuthApi.instance.parentConsent(studentId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ موافقة ولي الأمر بنجاح')));
+      context.go('/home');
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -134,7 +152,12 @@ class _ParentConsentScreenState extends State<ParentConsentScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              PrimaryButton(label: 'الموافقة والحفظ', padding: const EdgeInsets.symmetric(vertical: 14), fontSize: 14, onTap: _submit),
+              PrimaryButton(
+                label: _submitting ? 'جارٍ الحفظ...' : 'الموافقة والحفظ',
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                fontSize: 14,
+                onTap: _submitting ? null : _submit,
+              ),
               const SizedBox(height: 10),
               OutlineButton(
                 label: 'تنزيل نسخة PDF',

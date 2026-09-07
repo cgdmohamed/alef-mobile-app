@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/auth_api.dart';
+import '../../services/api_client.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/buttons.dart';
@@ -15,19 +17,48 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _studentName = TextEditingController(text: 'لمى عبدالله الحربي');
+  final _phone = TextEditingController();
   final _parentName = TextEditingController(text: 'عبدالله الحربي');
   final _parentEmail = TextEditingController(text: 'abdullah.h@email.com');
   bool _mawhibaRegistered = true;
   bool _agreed = true;
+  bool _submitting = false;
+  String? _error;
   static const _stages = ['الصف الرابع ابتدائي', 'الصف الخامس ابتدائي', 'الصف السادس ابتدائي', 'الأول متوسط', 'الثاني متوسط'];
   String _stage = 'الصف السادس ابتدائي';
 
   @override
   void dispose() {
     _studentName.dispose();
+    _phone.dispose();
     _parentName.dispose();
     _parentEmail.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_agreed || _submitting) return;
+    final phone = _phone.text.trim();
+    if (phone.isEmpty) {
+      setState(() => _error = 'يرجى إدخال رقم جوال ولي الأمر');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await AuthApi.instance.signup(name: _studentName.text.trim(), phone: phone, role: 'student');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إنشاء الحساب، يرجى تسجيل الدخول برقم الجوال لإتمام موافقة ولي الأمر')),
+      );
+      context.go('/login');
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   void _pickStage() async {
@@ -74,6 +105,15 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 20),
               AuthTextField(label: 'اسم الطالب الثلاثي', controller: _studentName, labelSize: 11, valueSize: 13, radius: 11),
+              const SizedBox(height: 12),
+              AuthTextField(
+                label: 'رقم جوال ولي الأمر',
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                labelSize: 11,
+                valueSize: 13,
+                radius: 11,
+              ),
               const SizedBox(height: 12),
               AuthSelectField(label: 'المرحلة الدراسية', value: _stage, onTap: _pickStage),
               const SizedBox(height: 12),
@@ -139,10 +179,18 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
               ),
+              if (_error != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(color: AppColors.dangerBg, borderRadius: BorderRadius.circular(10)),
+                  child: Text(_error!, style: tj(12, color: AppColors.coral)),
+                ),
+              ],
               const SizedBox(height: 28),
               PrimaryButton(
-                label: 'إنشاء الحساب',
-                onTap: _agreed ? () => context.push('/parent-consent') : null,
+                label: _submitting ? 'جارٍ الإنشاء...' : 'إنشاء الحساب',
+                onTap: (_agreed && !_submitting) ? _submit : null,
               ),
             ],
           ),

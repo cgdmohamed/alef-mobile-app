@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../models/models.dart';
-import '../../state/app_state.dart';
+import '../../services/assignments_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/misc.dart';
-import '../../widgets/section_state.dart';
 
 enum _Tab { inProgress, submitted, late }
 
@@ -20,21 +17,50 @@ class AssignmentsListScreen extends StatefulWidget {
 
 class _AssignmentsListScreenState extends State<AssignmentsListScreen> {
   _Tab _tab = _Tab.inProgress;
+  bool _loading = true;
+  String? _error;
+  List<ApiAssignment> _all = [];
 
-  List<Assignment> _forTab(List<Assignment> all, _Tab tab) {
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await AssignmentsApi.instance.myAssignments();
+      if (!mounted) return;
+      setState(() {
+        _all = data;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'تعذر تحميل الواجبات';
+        _loading = false;
+      });
+    }
+  }
+
+  List<ApiAssignment> _forTab(List<ApiAssignment> all, _Tab tab) {
     return all.where((a) {
       return switch (tab) {
-        _Tab.inProgress => a.status == AssignmentStatus.inProgress,
-        _Tab.submitted => a.status == AssignmentStatus.submitted,
-        _Tab.late => a.status == AssignmentStatus.late,
+        _Tab.inProgress => a.submissionStatus == null || a.submissionStatus == 'in_progress',
+        _Tab.submitted => a.submissionStatus == 'submitted' || a.submissionStatus == 'graded',
+        _Tab.late => a.submissionStatus == 'late',
       };
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final all = context.watch<AppState>().assignments;
-    final visible = _forTab(all, _tab);
+    final visible = _forTab(_all, _tab);
 
     return Scaffold(
       backgroundColor: AppColors.screenBg,
@@ -63,20 +89,27 @@ class _AssignmentsListScreenState extends State<AssignmentsListScreen> {
               ),
             ),
             Expanded(
-              child: SectionState(
-                section: DemoSection.assignments,
-                loading: (context) => const _AssignmentsLoading(),
-                empty: (context) => _tab == _Tab.inProgress
-                    ? const _AssignmentsEmpty()
-                    : Center(child: Text('لا يوجد شيء هنا بعد', style: tj(13, color: AppColors.textFaint))),
-                isEmpty: (context) => visible.isEmpty,
-                content: (context) => ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                  itemCount: visible.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, i) => _AssignmentCard(assignment: visible[i]),
-                ),
-              ),
+              child: _loading
+                  ? const _AssignmentsLoading()
+                  : _error != null
+                      ? StateMessage(
+                          icon: Text('!', style: tj(40, color: AppColors.coral)),
+                          iconBg: AppColors.dangerBg,
+                          title: 'تعذر تحميل الواجبات',
+                          subtitle: 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى',
+                          actionLabel: 'إعادة المحاولة',
+                          onAction: _load,
+                        )
+                      : visible.isEmpty
+                          ? (_tab == _Tab.inProgress
+                              ? const _AssignmentsEmpty()
+                              : Center(child: Text('لا يوجد شيء هنا بعد', style: tj(13, color: AppColors.textFaint))))
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                              itemCount: visible.length,
+                              separatorBuilder: (_, _) => const SizedBox(height: 12),
+                              itemBuilder: (context, i) => _AssignmentCard(assignment: visible[i]),
+                            ),
             ),
           ],
         ),
@@ -105,13 +138,13 @@ class _TabButton extends StatelessWidget {
 }
 
 class _AssignmentCard extends StatelessWidget {
-  final Assignment assignment;
+  final ApiAssignment assignment;
   const _AssignmentCard({required this.assignment});
 
   @override
   Widget build(BuildContext context) {
-    final late = assignment.status == AssignmentStatus.late;
-    final submitted = assignment.status == AssignmentStatus.submitted;
+    final late = assignment.submissionStatus == 'late';
+    final submitted = assignment.submissionStatus == 'submitted' || assignment.submissionStatus == 'graded';
     final secondaryStyle = late || submitted;
     return AppCard(
       border: late ? const Border(right: BorderSide(color: AppColors.coral, width: 3)) : null,
@@ -128,11 +161,7 @@ class _AssignmentCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text(assignment.meta, style: tj(11, color: AppColors.textFaint)),
-          if (assignment.status == AssignmentStatus.inProgress && assignment.kind == AssignmentKind.quiz) ...[
-            const SizedBox(height: 8),
-            ProgressTrack(value: assignment.progress),
-          ],
+          Text('يستحق ${assignment.dueAt.day}/${assignment.dueAt.month}', style: tj(11, color: AppColors.textFaint)),
           const SizedBox(height: 8),
           GestureDetector(
             onTap: () => context.push(
@@ -146,7 +175,10 @@ class _AssignmentCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               alignment: Alignment.center,
-              child: Text(assignment.ctaLabel, style: tj(12, weight: FontWeight.w700, color: secondaryStyle ? AppColors.textMuted : Colors.white)),
+              child: Text(
+                submitted ? 'عرض النتيجة' : (late ? 'تسليم متأخر' : 'ابدأ الآن'),
+                style: tj(12, weight: FontWeight.w700, color: secondaryStyle ? AppColors.textMuted : Colors.white),
+              ),
             ),
           ),
         ],
@@ -157,14 +189,11 @@ class _AssignmentCard extends StatelessWidget {
   static const _badgePadding = EdgeInsets.symmetric(horizontal: 7, vertical: 4);
 
   Widget _badge() {
-    if (assignment.status == AssignmentStatus.late) {
+    if (assignment.submissionStatus == 'late') {
       return const StatusBadge(label: 'متأخر', fg: AppColors.coral, bg: AppColors.dangerBg, padding: _badgePadding, radius: 6);
     }
-    if (assignment.status == AssignmentStatus.submitted) {
+    if (assignment.submissionStatus == 'submitted' || assignment.submissionStatus == 'graded') {
       return const StatusBadge(label: 'تم التسليم', fg: AppColors.success, bg: AppColors.successBg, padding: _badgePadding, radius: 6);
-    }
-    if (assignment.timerLabel != null) {
-      return StatusBadge(label: assignment.timerLabel!, fg: AppColors.coral, bg: AppColors.dangerBg, padding: _badgePadding, radius: 6);
     }
     return const StatusBadge(label: 'مفتوح', fg: AppColors.textMuted, bg: AppColors.inputFill, padding: _badgePadding, radius: 6);
   }

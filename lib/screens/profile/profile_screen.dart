@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../state/app_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
@@ -10,6 +12,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AppState>().currentUser;
     return Scaffold(
       backgroundColor: AppColors.screenBg,
       body: SafeArea(
@@ -20,31 +23,12 @@ class ProfileScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
               decoration: const BoxDecoration(gradient: AppColors.profileHeaderGradient),
-              child: Stack(
-                alignment: Alignment.topCenter,
+              child: Column(
                 children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    child: GestureDetector(
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعديل الملف الشخصي'))),
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(9)),
-                        alignment: Alignment.center,
-                        child: const AppIcon(IconBodies.pencil, size: 14, color: Colors.white, strokeWidth: 1.8),
-                      ),
-                    ),
-                  ),
-                  Column(
-                    children: [
-                      const AvatarPlaceholder(size: 84, photoAsset: 'assets/avatars/lama.png'),
-                      const SizedBox(height: 10),
-                      Text('لمى عبدالله الحربي', style: tj(17, weight: FontWeight.w800, color: Colors.white)),
-                      Text('طالبة — الصف السادس ابتدائي', style: tj(12, color: const Color(0xFFDEDCF9))),
-                    ],
-                  ),
+                  const AvatarPlaceholder(size: 84),
+                  const SizedBox(height: 10),
+                  Text(user?.name ?? '', style: tj(17, weight: FontWeight.w800, color: Colors.white)),
+                  if (user?.phone != null) Text(user!.phone!, style: tj(12, color: const Color(0xFFDEDCF9))),
                 ],
               ),
             ),
@@ -53,29 +37,14 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(child: StatTile(value: '5', label: 'المستوى', valueColor: AppColors.primary, valueSize: 15, labelSize: 9)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => context.push('/achievements'),
-                          child: StatTile(value: '12', label: 'شارة', valueColor: AppColors.warning, valueSize: 15, labelSize: 9),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(child: StatTile(value: '96%', label: 'الحضور', valueColor: AppColors.sky, valueSize: 15, labelSize: 9)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
                   AppCard(
                     child: Column(
                       children: [
-                        _InfoRow(label: 'البريد الإلكتروني', value: 'lama.h@email.com'),
+                        _InfoRow(label: 'البريد الإلكتروني', value: user?.email ?? '—'),
                         const SizedBox(height: 10),
-                        _InfoRow(label: 'المدرسة', value: 'مدارس الرؤية الأهلية'),
+                        _InfoRow(label: 'رقم الجوال', value: user?.phone ?? '—'),
                         const SizedBox(height: 10),
-                        _InfoRow(label: 'ولي الأمر', value: 'عبدالله الحربي'),
+                        _InfoRow(label: 'الحالة', value: user?.status ?? '—'),
                       ],
                     ),
                   ),
@@ -93,7 +62,10 @@ class ProfileScreen extends StatelessWidget {
                           label: 'تسجيل خروج',
                           color: AppColors.coral,
                           last: true,
-                          onTap: () => context.go('/login'),
+                          onTap: () async {
+                            await context.read<AppState>().logout();
+                            if (context.mounted) context.go('/login');
+                          },
                         ),
                       ],
                     ),

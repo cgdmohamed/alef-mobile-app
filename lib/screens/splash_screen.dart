@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text.dart';
 
@@ -12,11 +14,15 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(milliseconds: 1600), () {
-      if (mounted) context.go('/onboarding');
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appState = context.watch<AppState>();
+    if (!appState.authLoading) {
+      Future.microtask(() {
+        if (!mounted) return;
+        context.go(appState.isAuthenticated ? '/home' : '/onboarding');
+      });
+    }
   }
 
   @override

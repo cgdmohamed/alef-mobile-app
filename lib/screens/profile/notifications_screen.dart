@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../models/models.dart';
-import '../../state/app_state.dart';
+import '../../services/notifications_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/app_icon.dart';
 import '../../widgets/misc.dart';
-import '../../widgets/section_state.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -17,13 +14,56 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _unreadOnly = false;
+  bool _loading = true;
+  String? _error;
+  List<ApiNotification> _all = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await NotificationsApi.instance.list();
+      if (!mounted) return;
+      setState(() {
+        _all = data;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'تعذر تحميل الإشعارات';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _markAllRead() async {
+    await NotificationsApi.instance.markAllRead();
+    setState(() {
+      for (final n in _all) {
+        n.read = true;
+      }
+    });
+  }
+
+  Future<void> _markRead(ApiNotification n) async {
+    if (n.read) return;
+    setState(() => n.read = true);
+    await NotificationsApi.instance.markRead(n.id);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
-    final all = appState.notifications;
-    final unreadCount = appState.unreadNotifications;
-    final visible = _unreadOnly ? all.where((n) => !n.read).toList() : all;
+    final unreadCount = _all.where((n) => !n.read).length;
+    final visible = _unreadOnly ? _all.where((n) => !n.read).toList() : _all;
 
     return Scaffold(
       backgroundColor: AppColors.screenBg,
@@ -41,7 +81,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     children: [
                       Text('الإشعارات', style: tj(20, weight: FontWeight.w800, color: AppColors.textHeading)),
                       GestureDetector(
-                        onTap: appState.markAllNotificationsRead,
+                        onTap: _markAllRead,
                         child: Text('تعيين الكل كمقروء', style: tj(11, weight: FontWeight.w500, color: AppColors.primary)),
                       ),
                     ],
@@ -72,18 +112,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             ),
             Expanded(
-              child: SectionState(
-                section: DemoSection.notifications,
-                loading: (context) => const _NotificationsLoading(),
-                empty: (context) => const _NotificationsEmpty(),
-                isEmpty: (context) => visible.isEmpty,
-                content: (context) => ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                  itemCount: visible.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) => _NotificationRow(notification: visible[i]),
-                ),
-              ),
+              child: _loading
+                  ? const _NotificationsLoading()
+                  : _error != null
+                      ? StateMessage(
+                          icon: Text('!', style: tj(40, color: AppColors.coral)),
+                          iconBg: AppColors.dangerBg,
+                          title: 'تعذر تحميل الإشعارات',
+                          subtitle: 'تحقق من اتصالك بالإنترنت وحاول مرة أخرى',
+                          actionLabel: 'إعادة المحاولة',
+                          onAction: _load,
+                        )
+                      : visible.isEmpty
+                          ? const _NotificationsEmpty()
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                              itemCount: visible.length,
+                              separatorBuilder: (_, _) => const SizedBox(height: 8),
+                              itemBuilder: (context, i) => _NotificationRow(notification: visible[i], onTap: () => _markRead(visible[i])),
+                            ),
             ),
           ],
         ),
@@ -93,13 +140,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 }
 
 class _NotificationRow extends StatelessWidget {
-  final AppNotification notification;
-  const _NotificationRow({required this.notification});
+  final ApiNotification notification;
+  final VoidCallback onTap;
+  const _NotificationRow({required this.notification, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.read<AppState>().markNotificationRead(notification.id),
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -112,9 +160,9 @@ class _NotificationRow extends StatelessWidget {
             Container(
               width: 34,
               height: 34,
-              decoration: BoxDecoration(color: notification.iconColor, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(10)),
               alignment: Alignment.center,
-              child: AppIcon(notification.iconBody, size: 15, color: Colors.white, strokeWidth: 1.8),
+              child: const AppIcon(IconBodies.bell, size: 15, color: Colors.white, strokeWidth: 1.8),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -124,7 +172,7 @@ class _NotificationRow extends StatelessWidget {
                   Text(notification.title, style: tj(11, weight: FontWeight.w700, color: AppColors.textBody)),
                   Text(notification.subtitle, style: tj(10, color: AppColors.textMuted)),
                   const SizedBox(height: 2),
-                  Text(notification.timeLabel, style: tj(9, color: AppColors.textDisabled)),
+                  Text('${notification.createdAt.hour}:${notification.createdAt.minute.toString().padLeft(2, '0')}', style: tj(9, color: AppColors.textDisabled)),
                 ],
               ),
             ),

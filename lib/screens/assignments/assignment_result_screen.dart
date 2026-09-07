@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../models/models.dart';
-import '../../state/app_state.dart';
+import '../../services/assignments_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
+import '../../widgets/app_icon.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
 
@@ -17,22 +16,55 @@ class AssignmentResultScreen extends StatefulWidget {
 }
 
 class _AssignmentResultScreenState extends State<AssignmentResultScreen> {
+  bool _loading = true;
+  ApiAssignmentResult? _result;
+  bool _showedCongrats = false;
+
   @override
   void initState() {
     super.initState();
-    final appState = context.read<AppState>();
-    final assignment = appState.assignments.firstWhere((a) => a.id == widget.assignmentId);
-    final wasAlreadySubmitted = assignment.status == AssignmentStatus.submitted;
-    appState.completeAssignment(widget.assignmentId);
-    if (!wasAlreadySubmitted) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final result = await AssignmentsApi.instance.result(widget.assignmentId);
+    if (!mounted) return;
+    setState(() {
+      _result = result;
+      _loading = false;
+    });
+    if (result != null && !_showedCongrats) {
+      _showedCongrats = true;
       Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) showDialog(context: context, barrierDismissible: true, builder: (_) => const _CongratsModal());
+        if (mounted) showDialog(context: context, barrierDismissible: true, builder: (_) => _CongratsModal(grade: result.grade));
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(backgroundColor: AppColors.screenBg, body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    }
+
+    final result = _result;
+    if (result == null) {
+      return Scaffold(
+        backgroundColor: AppColors.screenBg,
+        body: SafeArea(
+          child: StateMessage(
+            icon: const AppIcon(IconBodies.clock, size: 34, color: AppColors.primary, strokeWidth: 1.6),
+            iconBg: AppColors.inputFill,
+            title: 'لم يتم تصحيح الواجب بعد',
+            subtitle: 'سيقوم المعلم بتصحيح إجاباتك قريبًا، تحقق لاحقًا',
+            actionLabel: 'عرض الواجبات',
+            onAction: () => context.go('/assignments'),
+          ),
+        ),
+      );
+    }
+
+    final grade = result.grade;
     return Scaffold(
       backgroundColor: AppColors.screenBg,
       body: SafeArea(
@@ -41,81 +73,47 @@ class _AssignmentResultScreenState extends State<AssignmentResultScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 14),
-                  child: Column(
-                    children: [
-                      _ScoreRing(percent: 0.92),
-                      SizedBox(height: 10),
-                      StatusBadge(
-                        label: 'ممتاز',
-                        fg: AppColors.success,
-                        bg: AppColors.successBg,
-                        fontSize: 11,
-                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        radius: 9,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              AppCard(
-                child: Center(
-                  child: RichText(
-                    text: TextSpan(
-                      style: tj(11, color: AppColors.textMuted),
+              if (grade != null)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Column(
                       children: [
-                        const TextSpan(text: 'متوسط الفصل: '),
-                        TextSpan(text: '78%', style: tj(11, weight: FontWeight.w700, color: AppColors.textHeading)),
+                        _ScoreRing(percent: (grade / 100).clamp(0, 1)),
+                        const SizedBox(height: 10),
+                        StatusBadge(
+                          label: grade >= 90 ? 'ممتاز' : (grade >= 70 ? 'جيد جدًا' : 'بحاجة لمراجعة'),
+                          fg: grade >= 70 ? AppColors.success : AppColors.warning,
+                          bg: grade >= 70 ? AppColors.successBg : AppColors.warningBg,
+                          fontSize: 11,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          radius: 9,
+                        ),
                       ],
                     ),
                   ),
                 ),
-              ),
               const SizedBox(height: 14),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('ملاحظات المدرب', style: tj(12, weight: FontWeight.w700, color: AppColors.textHeading)),
-                    const SizedBox(height: 6),
-                    Text('أداء ممتاز! ركزي أكثر على مسائل الكسور المركبة', style: tj(11, color: AppColors.textMuted, height: 1.7)),
-                  ],
+              if (result.teacherNote != null)
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('ملاحظات المدرب', style: tj(12, weight: FontWeight.w700, color: AppColors.textHeading)),
+                      const SizedBox(height: 6),
+                      Text(result.teacherNote!, style: tj(11, color: AppColors.textMuted, height: 1.7)),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              AppCard(
-                child: Column(
-                  children: const [
-                    _QuestionRow(label: 'السؤال 1', correct: true),
-                    SizedBox(height: 8),
-                    _QuestionRow(label: 'السؤال 2', correct: false),
-                    SizedBox(height: 8),
-                    _QuestionRow(label: 'السؤال 3', correct: true),
-                  ],
-                ),
-              ),
               const Spacer(),
               Row(
                 children: [
                   Expanded(
                     child: OutlineButton(
-                      label: 'عرض الواجب',
+                      label: 'عرض الواجبات',
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       fontSize: 12,
                       onTap: () => context.go('/assignments'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: 'مشاركة',
-                      shadow: false,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
-                      fontSize: 12,
-                      onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تمت مشاركة النتيجة'))),
                     ),
                   ),
                 ],
@@ -124,26 +122,6 @@ class _AssignmentResultScreenState extends State<AssignmentResultScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _QuestionRow extends StatelessWidget {
-  final String label;
-  final bool correct;
-  const _QuestionRow({required this.label, required this.correct});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: tj(11, color: AppColors.textBody)),
-        Text(
-          correct ? '✓ صحيح' : '✕ خطأ',
-          style: tj(11, color: correct ? AppColors.success : AppColors.coral),
-        ),
-      ],
     );
   }
 }
@@ -197,7 +175,8 @@ class _RingPainter extends CustomPainter {
 }
 
 class _CongratsModal extends StatelessWidget {
-  const _CongratsModal();
+  final int? grade;
+  const _CongratsModal({required this.grade});
 
   @override
   Widget build(BuildContext context) {
@@ -221,31 +200,20 @@ class _CongratsModal extends StatelessWidget {
             Text('مبروك!', style: tj(28, weight: FontWeight.w900, color: Colors.white)),
             const SizedBox(height: 14),
             Text(
-              'حصلت على تقييم ممتاز في اختبار الرياضيات — استمري بهذا التميز',
+              grade != null ? 'حصلت على $grade% في هذا الواجب — استمري بهذا التميز' : 'تم تصحيح واجبك — استمري بهذا التميز',
               textAlign: TextAlign.center,
               style: tj(14, color: const Color(0xFFDEDCF9), height: 1.7),
             ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
-              child: Text('🏅 شارة جديدة: نجم الرياضيات', style: tj(12, weight: FontWeight.w600, color: AppColors.gold)),
-            ),
             const SizedBox(height: 20),
             GestureDetector(
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تمت مشاركة الإنجاز'))),
+              onTap: () => Navigator.of(context).maybePop(),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
                 alignment: Alignment.center,
-                child: Text('مشاركة الإنجاز', style: tj(14, weight: FontWeight.w700, color: AppColors.primary)),
+                child: Text('إغلاق', style: tj(14, weight: FontWeight.w700, color: AppColors.primary)),
               ),
-            ),
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () => Navigator.of(context).maybePop(),
-              child: Text('إغلاق', style: tj(12, color: const Color(0xFFB4B2D6))),
             ),
           ],
         ),

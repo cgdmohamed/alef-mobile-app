@@ -2,11 +2,6 @@ import 'package:flutter/material.dart';
 
 enum UserRole { student, parent }
 
-/// Shared by every "*-loading/-empty/-error" screen variant in the design.
-/// [error] is only meaningful on Home — it's the only screen the design
-/// actually specifies an error state for (07d).
-enum ViewState { normal, loading, empty, error }
-
 enum MeetingStatus { liveNow, upcoming, ended }
 
 class Meeting {

@@ -1,16 +1,73 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_data.dart';
+import '../../services/reports_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
-import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
 
-class ReportDetailScreen extends StatelessWidget {
+/// `reportId == 'me'` shows the authenticated student's own report
+/// (`/students/me/report`). Any other value is treated as a child's roster
+/// id and fetched via `/reports/students/:id`, which the backend only
+/// allows for a parent who has completed consent for that specific child.
+class ReportDetailScreen extends StatefulWidget {
   final String reportId;
   const ReportDetailScreen({super.key, required this.reportId});
 
   @override
+  State<ReportDetailScreen> createState() => _ReportDetailScreenState();
+}
+
+class _ReportDetailScreenState extends State<ReportDetailScreen> {
+  bool _loading = true;
+  StudentReportSummary? _report;
+
+  @override
+  void initState() {
+    super.initState();
+    final future = widget.reportId == 'me'
+        ? ReportsApi.instance.myReport()
+        : ReportsApi.instance.childReport(widget.reportId);
+    future.then((data) {
+      if (mounted) {
+        setState(() {
+          _report = data;
+          _loading = false;
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(backgroundColor: Colors.white, body: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+    }
+    final report = _report;
+    if (report == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+                decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.divider))),
+                child: Row(children: [const BackChevron(), const SizedBox(width: 6), Text('التقرير', style: tj(14, weight: FontWeight.w700, color: AppColors.textHeading))]),
+              ),
+              Expanded(
+                child: StateMessage(
+                  icon: Text('!', style: tj(40, color: AppColors.textFaint)),
+                  iconBg: AppColors.inputFill,
+                  title: 'لا يوجد تقرير بعد',
+                  subtitle: '',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -24,7 +81,7 @@ class ReportDetailScreen extends StatelessWidget {
                 children: [
                   const BackChevron(),
                   const SizedBox(width: 6),
-                  Text('تقرير يوليو الشهري', style: tj(14, weight: FontWeight.w700, color: AppColors.textHeading)),
+                  Text('تقرير ${report.name}', style: tj(14, weight: FontWeight.w700, color: AppColors.textHeading)),
                 ],
               ),
             ),
@@ -36,96 +93,51 @@ class ReportDetailScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset('assets/avatars/lama.png', width: 44, height: 44, fit: BoxFit.cover),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('لمى عبدالله الحربي', style: tj(13, weight: FontWeight.w700, color: AppColors.textBody)),
-                            Text('الصف السادس ابتدائي', style: tj(10, color: AppColors.textFaint)),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: const [
-                        Expanded(child: _MiniStat(value: '91%', label: 'المتوسط', color: AppColors.primary)),
-                        SizedBox(width: 8),
-                        Expanded(child: _MiniStat(value: '96%', label: 'الحضور', color: AppColors.sky)),
-                        SizedBox(width: 8),
-                        Expanded(child: _MiniStat(value: '12', label: 'شارات', color: AppColors.warning)),
-                        SizedBox(width: 8),
-                        Expanded(child: _MiniStat(value: '5', label: 'المستوى', color: AppColors.coral)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text('درجات المهارات', style: tj(11, weight: FontWeight.w700, color: AppColors.textHeading)),
-                    const SizedBox(height: 8),
-                    Column(
-                      children: [
-                        for (final s in MockData.skillScores) ...[
-                          LabeledProgress(
-                            label: s.label,
-                            percent: s.percent,
-                            color: s.color,
-                            labelSize: 9,
-                            trackHeight: 6,
-                            gap: 2,
-                          ),
-                          if (s != MockData.skillScores.last) const SizedBox(height: 7),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: AppColors.successBg, borderRadius: BorderRadius.circular(12)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('نقاط القوة', style: tj(10, weight: FontWeight.w700, color: AppColors.success)),
-                                const SizedBox(height: 5),
-                                Text('التفكير النقدي، حل المشكلات، الالتزام بالمواعيد', style: tj(9, color: const Color(0xFF3A7A57), height: 1.6)),
-                              ],
-                            ),
-                          ),
-                        ),
+                        Expanded(child: _MiniStat(value: '${report.average}%', label: 'المتوسط', color: AppColors.primary)),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: AppColors.dangerBgSoft, borderRadius: BorderRadius.circular(12)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('نقاط تحتاج تطوير', style: tj(10, weight: FontWeight.w700, color: AppColors.orangeAccent)),
-                                const SizedBox(height: 5),
-                                Text('مهارات التواصل الشفهي والعرض التقديمي', style: tj(9, color: AppColors.dangerTextSoft, height: 1.6)),
-                              ],
-                            ),
-                          ),
-                        ),
+                        Expanded(child: _MiniStat(value: '${report.attendancePercent}%', label: 'الحضور', color: AppColors.sky)),
+                        const SizedBox(width: 8),
+                        Expanded(child: _MiniStat(value: '${report.points}', label: 'النقاط', color: AppColors.warning)),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    Text('الواجبات المسلّمة', style: tj(11, weight: FontWeight.w700, color: AppColors.textHeading)),
+                    const SizedBox(height: 8),
+                    if (report.submissions.isEmpty)
+                      Text('لا توجد واجبات مسلّمة بعد', style: tj(11, color: AppColors.textFaint))
+                    else
+                      for (final s in report.submissions.cast<Map<String, dynamic>>()) ...[
+                        AppCard(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(child: Text(s['title']?.toString() ?? '', style: tj(11, color: AppColors.textBody))),
+                              if (s['grade'] != null) Text('${s['grade']}%', style: tj(11, weight: FontWeight.w700, color: AppColors.primary)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    const SizedBox(height: 16),
+                    Text('سجل الحضور', style: tj(11, weight: FontWeight.w700, color: AppColors.textHeading)),
+                    const SizedBox(height: 8),
+                    if (report.attendance.isEmpty)
+                      Text('لا يوجد سجل حضور بعد', style: tj(11, color: AppColors.textFaint))
+                    else
+                      for (final a in report.attendance.cast<Map<String, dynamic>>()) ...[
+                        AppCard(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(child: Text(a['title']?.toString() ?? '', style: tj(11, color: AppColors.textBody))),
+                              Text(a['status']?.toString() ?? '', style: tj(11, color: AppColors.textFaint)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                   ],
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: PrimaryButton(
-                label: 'تنزيل PDF كامل',
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                fontSize: 13,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('جارِ تنزيل التقرير الكامل'))),
               ),
             ),
           ],
