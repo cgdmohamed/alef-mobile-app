@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_api.dart';
 import '../../services/api_client.dart';
+import '../../services/enrollment_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
 import '../../widgets/buttons.dart';
@@ -17,16 +18,25 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final _studentName = TextEditingController(text: 'لمى عبدالله الحربي');
+  final _studentName = TextEditingController();
   final _phone = TextEditingController();
-  final _parentName = TextEditingController(text: 'عبدالله الحربي');
-  final _parentEmail = TextEditingController(text: 'abdullah.h@email.com');
-  bool _mawhibaRegistered = true;
-  bool _agreed = true;
+  final _parentName = TextEditingController();
+  final _parentEmail = TextEditingController();
+  bool _mawhibaRegistered = false;
+  bool _agreed = false;
   bool _submitting = false;
   String? _error;
+  String? _pendingCode;
   static const _stages = ['الصف الرابع ابتدائي', 'الصف الخامس ابتدائي', 'الصف السادس ابتدائي', 'الأول متوسط', 'الثاني متوسط'];
   String _stage = 'الصف السادس ابتدائي';
+
+  @override
+  void initState() {
+    super.initState();
+    EnrollmentApi.instance.peekPendingCode().then((code) {
+      if (mounted) setState(() => _pendingCode = code);
+    });
+  }
 
   @override
   void dispose() {
@@ -106,38 +116,39 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 14),
               const StepIndicator(step: 2),
-              const SizedBox(height: 14),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.tint,
-                  border: Border.all(color: AppColors.tintBorder),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: const BoxDecoration(color: AppColors.mint, shape: BoxShape.circle),
-                      alignment: Alignment.center,
-                      child: Text('✓', style: tj(8, weight: FontWeight.w700, color: Colors.white)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'مدارس الرواد · المفكر الناقد الصغير · السادس/أ',
-                        style: tj(11, weight: FontWeight.w600, color: AppColors.ink),
-                        overflow: TextOverflow.ellipsis,
+              if (_pendingCode != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.tint,
+                    border: Border.all(color: AppColors.tintBorder),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'كود المدرسة: $_pendingCode — سيتم التحقق منه عند تسجيل الدخول',
+                          style: tj(11, weight: FontWeight.w600, color: AppColors.ink),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
               Text('بيانات الطالب', style: tj(20, weight: FontWeight.w800, color: AppColors.textHeading)),
               const SizedBox(height: 16),
-              AuthTextField(label: 'اسم الطالب الثلاثي', controller: _studentName, labelSize: 11, valueSize: 13, radius: 11),
+              AuthTextField(
+                label: 'اسم الطالب الثلاثي',
+                controller: _studentName,
+                hint: 'مثال: سلطان عبدالله الحربي',
+                labelSize: 11,
+                valueSize: 13,
+                radius: 11,
+              ),
               const SizedBox(height: 12),
               AuthTextField(
                 label: 'رقم جوال ولي الأمر',
@@ -150,11 +161,19 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 12),
               AuthSelectField(label: 'المرحلة الدراسية', value: _stage, onTap: _pickStage),
               const SizedBox(height: 12),
-              AuthTextField(label: 'اسم ولي الأمر', controller: _parentName, labelSize: 11, valueSize: 13, radius: 11),
+              AuthTextField(
+                label: 'اسم ولي الأمر',
+                controller: _parentName,
+                hint: 'مثال: عبدالله الحربي',
+                labelSize: 11,
+                valueSize: 13,
+                radius: 11,
+              ),
               const SizedBox(height: 12),
               AuthTextField(
                 label: 'بريد ولي الأمر',
                 controller: _parentEmail,
+                hint: 'example@email.com',
                 keyboardType: TextInputType.emailAddress,
                 labelSize: 11,
                 valueSize: 13,

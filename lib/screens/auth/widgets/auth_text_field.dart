@@ -6,6 +6,7 @@ import '../../../theme/app_text.dart';
 class AuthTextField extends StatelessWidget {
   final String label;
   final TextEditingController? controller;
+  final String? hint;
   final bool obscure;
   final Widget? trailing;
   final TextInputType? keyboardType;
@@ -17,6 +18,7 @@ class AuthTextField extends StatelessWidget {
     super.key,
     required this.label,
     this.controller,
+    this.hint,
     this.obscure = false,
     this.trailing,
     this.keyboardType,
@@ -48,7 +50,12 @@ class AuthTextField extends StatelessWidget {
                   keyboardType: keyboardType,
                   textAlign: TextAlign.right,
                   style: tj(valueSize, color: AppColors.textBody),
-                  decoration: const InputDecoration(border: InputBorder.none, isDense: true),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    hintText: hint,
+                    hintStyle: tj(valueSize, color: AppColors.textDisabled),
+                  ),
                 ),
               ),
               ?trailing,

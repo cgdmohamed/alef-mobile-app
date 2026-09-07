@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_api.dart';
 import '../../services/api_client.dart';
+import '../../services/enrollment_api.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
@@ -86,12 +87,36 @@ class _OtpScreenState extends State<OtpScreen> {
     });
     try {
       await context.read<AppState>().verifyOtp(widget.phone, code);
+      await _redeemPendingEnrollmentCode();
       if (!mounted) return;
       context.go('/home');
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// If this account just came from the school-code signup step, this is
+  /// its first login — attempt the actual enrollment now (see
+  /// EnrollmentApi's doc comment for why it can't happen any earlier).
+  /// A returning user with no pending code skips this entirely.
+  Future<void> _redeemPendingEnrollmentCode() async {
+    final code = await EnrollmentApi.instance.takePendingCode();
+    if (code == null) return;
+    try {
+      await EnrollmentApi.instance.redeem(code);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم التحقق من الكود والالتحاق بمدرستك بنجاح')),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم تسجيل الدخول، لكن تعذر ربطك بالمدرسة: ${e.message}')),
+        );
+      }
     }
   }
 

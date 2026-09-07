@@ -369,23 +369,27 @@ Any authenticated user
 
 ---
 
-## Enrollment (backend-ready, not yet called by the app)
+## Enrollment
 
 ### `POST /enrollment/redeem`
 Roles: **student**
 
 | Body | Type |
 |---|---|
-| `code` | string — a code a school admin generated |
+| `code` | string — a code a school admin generated, format `ALEF-XXXX-XXXX` |
 
 → `{ classId, redeemed: true }`. Also links (or creates) the caller's
-school-roster `Student` row and sets their `User.schoolId` — this is the
-**intended** mechanism for turning a self-signup student into a fully
-functional roster-linked account (unlocking `/home/student`, real
-assignments, and reports). **No screen in the app currently calls this** —
-after signup, the student is only told to wait for parent consent; entering
-a class enrollment code isn't part of the current UI flow. Wiring a "redeem
-code" screen and calling this endpoint would close that gap.
+school-roster `Student` row and sets their `User.schoolId` — the mechanism
+that turns a self-signup student into a fully functional roster-linked
+account (unlocking `/home/student`, real assignments, and reports).
+
+This requires an authenticated **student**, but the code is entered on the
+school-code screen *before* an account exists (signup step 1 of 2) — there's
+no public "preview this code" endpoint. So `EnrollmentApi.savePendingCode()`
+stashes it locally right after entry, and `otp_screen.dart` calls this
+endpoint automatically the first time that new account logs in via OTP
+(`EnrollmentApi.takePendingCode()` + `redeem()`), surfacing success/failure
+in a snackbar. A returning user with no pending code skips this entirely.
 
 ---
 
