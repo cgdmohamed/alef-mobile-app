@@ -51,16 +51,16 @@ and turns into `null` rather than throwing. Called out per-endpoint below.
 
 ## Auth & Session
 
-Mobile uses **phone + OTP** exclusively — there is no email/password login on
-this client (that's the web admin panel's flow, `POST /auth/login`, not used
-by the app).
+Mobile uses **email + OTP** exclusively — there is no password login on this
+client (that's the web admin panel's flow, `POST /auth/login`, not used by
+the app). The code is emailed (`EmailOtpSender`, API-side), not texted.
 
 ### `POST /auth/otp/request`
 Public · limit **5/min**
 
 | Body | Type |
 |---|---|
-| `phone` | string, E.164 format (e.g. `+9665XXXXXXXX`) |
+| `email` | string |
 
 → `{ "sent": true, "expiresInSeconds": 300 }`
 
@@ -69,7 +69,7 @@ Public · limit **10/min**
 
 | Body | Type |
 |---|---|
-| `phone` | string |
+| `email` | string |
 | `code` | string, 4–8 chars |
 
 → `{ "accessToken": "...", "refreshToken": "...", "user": { ...AuthUser } }`
@@ -90,7 +90,8 @@ Public · limit **5/min**
 | Body | Type |
 |---|---|
 | `name` | string |
-| `phone` | string, E.164 |
+| `email` | string — becomes the OTP login identifier |
+| `phone` | string, E.164, optional — contact metadata only |
 | `role` | `"student"` \| `"parent"` |
 
 → `AuthUser`. A student signup starts as `status: "pending_consent"` — they

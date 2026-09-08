@@ -15,10 +15,10 @@ import '../../widgets/buttons.dart';
 enum OtpPurpose { login }
 
 class OtpScreen extends StatefulWidget {
-  final String phone;
+  final String email;
   final OtpPurpose purpose;
 
-  const OtpScreen({super.key, required this.phone, this.purpose = OtpPurpose.login});
+  const OtpScreen({super.key, required this.email, this.purpose = OtpPurpose.login});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -69,7 +69,7 @@ class _OtpScreenState extends State<OtpScreen> {
     if (_seconds > 0 || _resending) return;
     setState(() => _resending = true);
     try {
-      await AuthApi.instance.requestOtp(widget.phone);
+      await AuthApi.instance.requestOtp(widget.email);
       if (mounted) _startTimer();
     } on ApiException catch (e) {
       setState(() => _error = e.message);
@@ -86,7 +86,7 @@ class _OtpScreenState extends State<OtpScreen> {
       _error = null;
     });
     try {
-      await context.read<AppState>().verifyOtp(widget.phone, code);
+      await context.read<AppState>().verifyOtp(widget.email, code);
       await _redeemPendingEnrollmentCode();
       if (!mounted) return;
       context.go('/home');
@@ -150,7 +150,7 @@ class _OtpScreenState extends State<OtpScreen> {
               Text('رمز التحقق', style: tj(24, weight: FontWeight.w800, color: AppColors.textHeading)),
               const SizedBox(height: 8),
               Text(
-                'تم إرسال رمز مكوّن من 6 أرقام إلى ${widget.phone}',
+                'تم إرسال رمز مكوّن من 6 أرقام إلى ${widget.email}',
                 style: tj(13, color: AppColors.textMuted, height: 1.7),
               ),
               const SizedBox(height: 14),

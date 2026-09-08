@@ -50,7 +50,7 @@ GoRouter buildAppRouter(AppState appState) {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           return OtpScreen(
-            phone: extra?['phone'] as String? ?? '',
+            email: extra?['email'] as String? ?? '',
             purpose: extra?['purpose'] as OtpPurpose? ?? OtpPurpose.login,
           );
         },

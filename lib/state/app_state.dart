@@ -32,8 +32,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<AuthUser> verifyOtp(String phone, String code) async {
-    final result = await AuthApi.instance.verifyOtp(phone, code);
+  Future<AuthUser> verifyOtp(String email, String code) async {
+    final result = await AuthApi.instance.verifyOtp(email, code);
     currentUser = result.user;
     notifyListeners();
     return result.user;

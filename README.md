@@ -8,8 +8,8 @@ to the real Alef Future backend (`D:\2026\Alif Future\v2\api`, NestJS + Postgres
 
 ## Features
 
-- **Auth & onboarding** — splash, onboarding carousel, phone + OTP login (no
-  email/password on this client — that's the web admin panel's flow), and a 2-step
+- **Auth & onboarding** — splash, onboarding carousel, email + OTP login (no
+  password on this client — that's the web admin panel's flow), and a 2-step
   signup: school-issued join code → student/parent details. The join code can't be
   validated until an account exists (see `docs/API.md`'s Enrollment section), so it's
   stashed locally and redeemed automatically on the new account's first OTP login.
@@ -89,9 +89,9 @@ flutter build web            # Web
 
 ## Demo notes
 
-- **Login** is phone + OTP against the real backend — request a code, then verify it. In
-  local dev, the backend's console OTP sender logs the code to its own terminal instead
-  of sending a real SMS.
+- **Login** is email + OTP against the real backend — request a code, then verify it. In
+  local dev (no `SMTP_HOST` configured on the backend), the code is logged to the
+  backend's own terminal instead of actually being emailed.
 - **Signup**'s school-code step accepts any non-empty code (format `ALEF-XXXX-XXXX`,
   whatever a school admin generates in the admin panel) — it's actually redeemed against
   the backend on first login, not validated on this screen (see `docs/API.md`).

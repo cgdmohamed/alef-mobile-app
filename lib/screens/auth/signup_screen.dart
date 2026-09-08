@@ -49,20 +49,26 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> _submit() async {
     if (!_agreed || _submitting) return;
-    final phone = _phone.text.trim();
-    if (phone.isEmpty) {
-      setState(() => _error = 'يرجى إدخال رقم جوال ولي الأمر');
+    final email = _parentEmail.text.trim();
+    if (email.isEmpty) {
+      setState(() => _error = 'يرجى إدخال بريد ولي الأمر');
       return;
     }
+    final phone = _phone.text.trim();
     setState(() {
       _submitting = true;
       _error = null;
     });
     try {
-      await AuthApi.instance.signup(name: _studentName.text.trim(), phone: phone, role: 'student');
+      await AuthApi.instance.signup(
+        name: _studentName.text.trim(),
+        email: email,
+        phone: phone.isEmpty ? null : phone,
+        role: 'student',
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إنشاء الحساب، يرجى تسجيل الدخول برقم الجوال لإتمام موافقة ولي الأمر')),
+        const SnackBar(content: Text('تم إنشاء الحساب، يرجى تسجيل الدخول ببريد ولي الأمر لإتمام موافقة ولي الأمر')),
       );
       context.go('/login');
     } on ApiException catch (e) {
@@ -151,7 +157,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 12),
               AuthTextField(
-                label: 'رقم جوال ولي الأمر',
+                label: 'رقم جوال ولي الأمر (اختياري)',
                 controller: _phone,
                 keyboardType: TextInputType.phone,
                 labelSize: 11,
@@ -171,7 +177,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 12),
               AuthTextField(
-                label: 'بريد ولي الأمر',
+                label: 'بريد ولي الأمر (لتسجيل الدخول)',
                 controller: _parentEmail,
                 hint: 'example@email.com',
                 keyboardType: TextInputType.emailAddress,

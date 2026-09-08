@@ -40,18 +40,18 @@ class AuthApi {
   static final AuthApi instance = AuthApi._();
   final _client = ApiClient.instance;
 
-  Future<void> requestOtp(String phone) async {
-    await _client.post('/auth/otp/request', {'phone': phone});
+  Future<void> requestOtp(String email) async {
+    await _client.post('/auth/otp/request', {'email': email});
   }
 
-  Future<AuthResult> verifyOtp(String phone, String code) async {
-    final data = await _client.post('/auth/otp/verify', {'phone': phone, 'code': code});
+  Future<AuthResult> verifyOtp(String email, String code) async {
+    final data = await _client.post('/auth/otp/verify', {'email': email, 'code': code});
     await _client.setTokens(accessToken: data['accessToken'], refreshToken: data['refreshToken']);
     return AuthResult(AuthUser.fromJson(data['user']));
   }
 
-  Future<AuthUser> signup({required String name, required String phone, required String role}) async {
-    final data = await _client.post('/auth/signup', {'name': name, 'phone': phone, 'role': role});
+  Future<AuthUser> signup({required String name, required String email, String? phone, required String role}) async {
+    final data = await _client.post('/auth/signup', {'name': name, 'email': email, if (phone != null) 'phone': phone, 'role': role});
     return AuthUser.fromJson(data);
   }
 

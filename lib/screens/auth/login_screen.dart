@@ -16,27 +16,27 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _phone = TextEditingController();
+  final _email = TextEditingController();
   bool _sending = false;
   String? _error;
 
   @override
   void dispose() {
-    _phone.dispose();
+    _email.dispose();
     super.dispose();
   }
 
   Future<void> _requestOtp() async {
-    final phone = _phone.text.trim();
-    if (phone.isEmpty) return;
+    final email = _email.text.trim();
+    if (email.isEmpty) return;
     setState(() {
       _sending = true;
       _error = null;
     });
     try {
-      await AuthApi.instance.requestOtp(phone);
+      await AuthApi.instance.requestOtp(email);
       if (!mounted) return;
-      context.push('/forgot-password', extra: {'phone': phone, 'purpose': OtpPurpose.login});
+      context.push('/forgot-password', extra: {'email': email, 'purpose': OtpPurpose.login});
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -61,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 22),
               Text('مرحبًا بعودتك', style: tj(26, weight: FontWeight.w800, color: AppColors.textHeading)),
               const SizedBox(height: 6),
-              Text('أدخل رقم جوالك لتسجيل الدخول برمز تحقق', style: tj(14, color: AppColors.textMuted)),
+              Text('أدخل بريدك الإلكتروني لتسجيل الدخول برمز تحقق', style: tj(14, color: AppColors.textMuted)),
               const SizedBox(height: 24),
               if (_error != null) ...[
                 Container(
@@ -72,9 +72,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 14),
               ],
               AuthTextField(
-                label: 'رقم الجوال',
-                controller: _phone,
-                keyboardType: TextInputType.phone,
+                label: 'البريد الإلكتروني',
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 24),
               PrimaryButton(
