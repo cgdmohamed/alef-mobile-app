@@ -106,6 +106,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(child.name, style: tj(14, weight: FontWeight.w700, color: AppColors.textHeading)),
+                                          if (child.stage.isNotEmpty) Text(child.stage, style: tj(10, color: AppColors.textFaint)),
                                           const SizedBox(height: 10),
                                           Row(
                                             children: [
@@ -132,13 +133,27 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                                           ),
                                           const SizedBox(height: 10),
                                           GestureDetector(
-                                            onTap: () => context.push('/report/${child.id}'),
+                                            onTap: () async {
+                                              if (child.consentPending && child.userId != null) {
+                                                await context.push<bool>('/parent-consent', extra: {
+                                                  'studentId': child.userId!,
+                                                  'studentName': child.name,
+                                                  'studentStage': child.stage,
+                                                });
+                                                if (mounted) _load();
+                                              } else {
+                                                context.push('/report/${child.id}');
+                                              }
+                                            },
                                             child: Container(
                                               width: double.infinity,
                                               padding: const EdgeInsets.symmetric(vertical: 9),
                                               decoration: BoxDecoration(color: AppColors.tint, borderRadius: BorderRadius.circular(10)),
                                               alignment: Alignment.center,
-                                              child: Text('عرض التقرير الكامل', style: tj(12, weight: FontWeight.w700, color: AppColors.primary)),
+                                              child: Text(
+                                                child.consentPending ? 'إتمام موافقة ولي الأمر' : 'عرض التقرير الكامل',
+                                                style: tj(12, weight: FontWeight.w700, color: AppColors.primary),
+                                              ),
                                             ),
                                           ),
                                         ],

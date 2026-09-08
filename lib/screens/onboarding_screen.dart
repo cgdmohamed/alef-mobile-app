@@ -38,14 +38,7 @@ class OnboardingScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(24),
                       ),
                       alignment: Alignment.center,
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          'رسم توضيحي: أفضل المدربين',
-                          textAlign: TextAlign.center,
-                          style: tj(13, color: AppColors.textFaint),
-                        ),
-                      ),
+                      child: const Icon(Icons.school_rounded, size: 110, color: AppColors.primary),
                     ),
                     const SizedBox(height: 28),
                     Text(

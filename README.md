@@ -10,19 +10,16 @@ to the real Alef Future backend (`D:\2026\Alif Future\v2\api`, NestJS + Postgres
 
 - **Auth & onboarding** — splash, onboarding carousel, email + OTP login (no
   password on this client — that's the web admin panel's flow), and a 2-step
-  signup: school-issued join code → student/parent details. The join code can't be
-  validated until an account exists (see `docs/API.md`'s Enrollment section), so it's
-  stashed locally and redeemed automatically on the new account's first OTP login.
-- **Home** — role-specific dashboard (student vs. parent), live meeting-of-the-day card,
-  an always-on "live activity now" banner for trainer-pushed timed activities, stats,
-  upcoming assignments, and past recordings.
+  signup: school-issued join code → student/parent details. The API validates and
+  consumes the code atomically, links the student to the class, and creates the parent
+  account when needed. Students wait for parent approval before entering the app.
+- **Home** — role-specific dashboard (student vs. parent), meeting-of-the-day card,
+  stats, upcoming assignments, and past recordings.
 - **Meetings** — list (list/calendar views, search & filters), a live in-meeting screen
-  with a real Agora RTC video call (camera/mic, local + remote tiles), and a recording
-  player with tabs for summary / related activities / FAQ.
-- **Assignments** — list with status tabs, three work types (multiple-choice quiz, essay
-  report, creative puzzle), a result/grade screen, and a congrats modal. Quiz/essay/puzzle
-  *content* is local UI fixtures (no server-side question bank yet) — but submission and
-  grading are real.
+  with a real Agora RTC video call (camera/mic, local + remote tiles), and real playback
+  for available recordings.
+- **Assignments** — list with status tabs, instructions loaded from the linked program
+  content block, a written response flow, real submission, and teacher grading results.
 - **Live activity** — standalone timed-question screen opened from the home banner.
 - **Achievements** — level, badges, progress toward the next badge, class leaderboard.
 - **Reports** — performance charts, downloadable report list, and a report detail view.
@@ -56,7 +53,7 @@ lib/
   widgets/                 # shared building blocks (buttons, cards, icons, nav bar...)
   screens/
     auth/                  # splash → onboarding → login/signup → consent
-    home/                    # student/parent dashboards, live-activity screen
+    home/                    # student/parent dashboards
     meetings/                 # list, live meeting (real Agora video), recording
     assignments/               # list, quiz/essay/puzzle, result
     achievements/, reports/, profile/, support/
@@ -72,12 +69,12 @@ and the Alef Future API running (see `D:\2026\Alif Future\v2\api`'s own README �
 
 ```bash
 flutter pub get
-flutter run                 # any connected device/simulator — defaults to http://localhost:3000
+flutter run                 # defaults to https://api.aliffuture.com
 flutter run -d chrome        # web
 ```
 
 Point at a different backend with `--dart-define=API_BASE_URL=...`. Android emulators
-can't reach the host machine via `localhost` — use `http://10.0.2.2:3000` there instead.
+reach a local host API through `http://10.0.2.2:3000`.
 
 Build for release:
 
@@ -92,9 +89,7 @@ flutter build web            # Web
 - **Login** is email + OTP against the real backend — request a code, then verify it. In
   local dev (no `SMTP_HOST` configured on the backend), the code is logged to the
   backend's own terminal instead of actually being emailed.
-- **Signup**'s school-code step accepts any non-empty code (format `ALEF-XXXX-XXXX`,
-  whatever a school admin generates in the admin panel) — it's actually redeemed against
-  the backend on first login, not validated on this screen (see `docs/API.md`).
+- **Signup** validates the `ALEF-XXXX-XXXX` school code when the details form is submitted.
 - Settings → "معاينة الحالات" toggles each list screen's loading/empty/error state for
   demoing without needing a real failing backend.
 

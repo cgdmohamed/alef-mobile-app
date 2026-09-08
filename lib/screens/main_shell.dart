@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../widgets/bottom_nav.dart';
 
 /// Hosts the 5 bottom-tab branches (home/assignments/meetings/reports/
@@ -15,6 +17,7 @@ class MainShell extends StatelessWidget {
       body: shell,
       bottomNavigationBar: AppBottomNav(
         currentIndex: shell.currentIndex,
+        isParent: context.watch<AppState>().role.name == 'parent',
         onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
       ),
     );

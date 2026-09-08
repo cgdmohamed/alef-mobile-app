@@ -6,9 +6,9 @@ import '../screens/auth/school_code_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/auth/otp_screen.dart';
 import '../screens/auth/parent_consent_screen.dart';
+import '../screens/auth/awaiting_consent_screen.dart';
 import '../screens/main_shell.dart';
 import '../screens/home/home_router_screen.dart';
-import '../screens/home/live_activity_screen.dart';
 import '../screens/meetings/meetings_list_screen.dart';
 import '../screens/meetings/live_meeting_screen.dart';
 import '../screens/meetings/recording_screen.dart';
@@ -36,6 +36,8 @@ GoRouter buildAppRouter(AppState appState) {
 
       final isPublic = _publicPaths.contains(path);
       if (!appState.isAuthenticated && !isPublic) return '/login';
+      if (appState.isPendingConsent && path != '/awaiting-consent') return '/awaiting-consent';
+      if (appState.isAuthenticated && !appState.isPendingConsent && path == '/awaiting-consent') return '/home';
       if (appState.isAuthenticated && (path == '/login' || path == '/signup')) return '/home';
       return null;
     },
@@ -45,6 +47,7 @@ GoRouter buildAppRouter(AppState appState) {
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (context, state) => const SchoolCodeScreen()),
       GoRoute(path: '/signup/details', builder: (context, state) => const SignupScreen()),
+      GoRoute(path: '/awaiting-consent', builder: (context, state) => const AwaitingConsentScreen()),
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) {
@@ -55,10 +58,16 @@ GoRouter buildAppRouter(AppState appState) {
           );
         },
       ),
-      GoRoute(path: '/live-activity', builder: (context, state) => const LiveActivityScreen()),
       GoRoute(
         path: '/parent-consent',
-        builder: (context, state) => ParentConsentScreen(studentId: state.extra as String?),
+        builder: (context, state) {
+          final child = state.extra as Map<String, String>?;
+          return ParentConsentScreen(
+            studentId: child?['studentId'],
+            studentName: child?['studentName'],
+            studentStage: child?['studentStage'],
+          );
+        },
       ),
       GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),

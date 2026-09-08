@@ -7,12 +7,9 @@ import '../../theme/app_text.dart';
 import '../../widgets/buttons.dart';
 import 'widgets/step_indicator.dart';
 
-/// Step 1 of signup: a school-issued join code. There's no backend endpoint
-/// to check a code's validity before an account exists — redeeming one
-/// requires an authenticated student (see EnrollmentApi's doc comment) — so
-/// this screen only checks a code was entered, stashes it, and actual
-/// validation happens as a redeem attempt right after the new account's
-/// first OTP login.
+/// Step 1 of signup: a school-issued join code. It is validated atomically
+/// with account creation on the next screen, so invalid codes never create
+/// partial accounts.
 ///
 /// Single free-text field rather than fixed character boxes: real codes are
 /// backend-generated as `ALEF-XXXX-XXXX` (see EnrollmentCodesService), not a
@@ -102,7 +99,7 @@ class _SchoolCodeScreenState extends State<SchoolCodeScreen> {
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   child: Text(
-                    'سيتم التحقق من صلاحية الكود وربطك بمدرستك عند تسجيل الدخول بعد إنشاء الحساب.',
+                    'سيتم التحقق من صلاحية الكود وربطك بمدرستك عند إنشاء الحساب.',
                     style: tj(11, color: AppColors.textMuted, height: 1.7),
                   ),
                 ),

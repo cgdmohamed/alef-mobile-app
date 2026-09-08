@@ -50,8 +50,28 @@ class AuthApi {
     return AuthResult(AuthUser.fromJson(data['user']));
   }
 
-  Future<AuthUser> signup({required String name, required String email, String? phone, required String role}) async {
-    final data = await _client.post('/auth/signup', {'name': name, 'email': email, if (phone != null) 'phone': phone, 'role': role});
+  Future<AuthUser> signup({
+    required String name,
+    required String email,
+    String? phone,
+    required String role,
+    String? enrollmentCode,
+    String? stage,
+    String? parentName,
+    String? parentEmail,
+    String? parentPhone,
+  }) async {
+    final data = await _client.post('/auth/signup', {
+      'name': name,
+      'email': email,
+      if (phone != null) 'phone': phone,
+      'role': role,
+      if (enrollmentCode != null) 'enrollmentCode': enrollmentCode,
+      if (stage != null) 'stage': stage,
+      if (parentName != null) 'parentName': parentName,
+      if (parentEmail != null) 'parentEmail': parentEmail,
+      if (parentPhone != null) 'parentPhone': parentPhone,
+    });
     return AuthUser.fromJson(data);
   }
 
@@ -64,8 +84,9 @@ class AuthApi {
     try {
       final data = await _client.get('/auth/me');
       return AuthUser.fromJson(data);
-    } on ApiException {
-      return null;
+    } on ApiException catch (e) {
+      if (e.status == 401) return null;
+      rethrow;
     }
   }
 

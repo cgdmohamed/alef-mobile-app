@@ -9,23 +9,21 @@ import '../../widgets/misc.dart';
 
 class ParentConsentScreen extends StatefulWidget {
   final String? studentId;
-  const ParentConsentScreen({super.key, this.studentId});
+  final String? studentName;
+  final String? studentStage;
+  const ParentConsentScreen({super.key, this.studentId, this.studentName, this.studentStage});
 
   @override
   State<ParentConsentScreen> createState() => _ParentConsentScreenState();
 }
 
 class _ParentConsentScreenState extends State<ParentConsentScreen> {
-  bool _shareResults = true;
-  bool _recordSessions = true;
+  bool _agreed = false;
   bool _submitting = false;
-  final List<Offset?> _strokePoints = [];
-
-  bool get _signed => _strokePoints.isNotEmpty;
 
   Future<void> _submit() async {
-    if (!_signed) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى التوقيع أولًا لإتمام الموافقة')));
+    if (!_agreed) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى تأكيد الموافقة أولًا')));
       return;
     }
     final studentId = widget.studentId;
@@ -38,7 +36,7 @@ class _ParentConsentScreenState extends State<ParentConsentScreen> {
       await AuthApi.instance.parentConsent(studentId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ موافقة ولي الأمر بنجاح')));
-      context.go('/home');
+      context.pop(true);
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
@@ -76,13 +74,13 @@ class _ParentConsentScreenState extends State<ParentConsentScreen> {
                         decoration: BoxDecoration(color: AppColors.tint, borderRadius: BorderRadius.circular(12)),
                         child: Row(
                           children: [
-                            const AvatarPlaceholder(size: 38, photoAsset: 'assets/avatars/lama.png'),
+                            const AvatarPlaceholder(size: 38),
                             const SizedBox(width: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('لمى عبدالله الحربي', style: tj(13, weight: FontWeight.w700, color: AppColors.textBody)),
-                                Text('الصف السادس ابتدائي', style: tj(11, color: AppColors.textMuted)),
+                                Text(widget.studentName ?? 'الطالب', style: tj(13, weight: FontWeight.w700, color: AppColors.textBody)),
+                                Text(widget.studentStage ?? '', style: tj(11, color: AppColors.textMuted)),
                               ],
                             ),
                           ],
@@ -99,7 +97,7 @@ class _ParentConsentScreenState extends State<ParentConsentScreen> {
                         ),
                         child: SingleChildScrollView(
                           child: Text(
-                            'أقرّ أنا ولي أمر الطالبة المذكورة أعلاه بموافقتي الرسمية على مشاركتها في '
+                            'أقرّ أنا ولي أمر الطالب/الطالبة المذكور أعلاه بموافقتي الرسمية على المشاركة في '
                             'برنامج فصول ألف للموهوبين، وأوافق على تسجيل اللقاءات المباشرة لأغراض تعليمية، '
                             'ومشاركة نتائج التقييم مع الجهات المعنية داخل المنصة، وتسجيل بيانات الحضور '
                             'والغياب، والالتزام بالتواصل مع أخصائي الموهبة المتابع لملف ابنتي عند الحاجة، '
@@ -110,42 +108,9 @@ class _ParentConsentScreenState extends State<ParentConsentScreen> {
                       ),
                       const SizedBox(height: 14),
                       _ConsentCheck(
-                        label: 'أوافق على مشاركة النتائج',
-                        value: _shareResults,
-                        onTap: () => setState(() => _shareResults = !_shareResults),
-                      ),
-                      const SizedBox(height: 8),
-                      _ConsentCheck(
-                        label: 'أوافق على تسجيل اللقاءات',
-                        value: _recordSessions,
-                        onTap: () => setState(() => _recordSessions = !_recordSessions),
-                      ),
-                      const SizedBox(height: 16),
-                      GestureDetector(
-                        onPanUpdate: (d) => setState(() => _strokePoints.add(d.localPosition)),
-                        onPanEnd: (_) => setState(() => _strokePoints.add(null)),
-                        child: Container(
-                          height: 90,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFC7C4EF), width: 1.5, style: BorderStyle.solid),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: _signed
-                              ? CustomPaint(painter: _SignaturePainter(_strokePoints), size: Size.infinite)
-                              : Center(
-                                  child: Text('التوقيع الرقمي (ارسم بإصبعك)', style: tj(12, color: AppColors.textFaint)),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _InfoBox(label: 'الاسم الكامل لولي الأمر', value: 'عبدالله سعد الحربي'),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(child: _InfoBox(label: 'رقم الهوية', value: '10XXXXXXXX')),
-                        ],
+                        label: 'قرأت الإقرار وأوافق عليه',
+                        value: _agreed,
+                        onTap: () => setState(() => _agreed = !_agreed),
                       ),
                     ],
                   ),
@@ -157,13 +122,6 @@ class _ParentConsentScreenState extends State<ParentConsentScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 fontSize: 14,
                 onTap: _submitting ? null : _submit,
-              ),
-              const SizedBox(height: 10),
-              OutlineButton(
-                label: 'تنزيل نسخة PDF',
-                color: AppColors.textMuted,
-                fontSize: 13,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تنزيل نسخة PDF'))),
               ),
             ],
           ),
@@ -200,51 +158,4 @@ class _ConsentCheck extends StatelessWidget {
       ),
     );
   }
-}
-
-class _InfoBox extends StatelessWidget {
-  final String label;
-  final String value;
-  const _InfoBox({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-      decoration: BoxDecoration(
-        color: AppColors.inputFill,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(11),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: tj(9, color: AppColors.textFaint)),
-          const SizedBox(height: 2),
-          Text(value, style: tj(12, color: AppColors.textBody)),
-        ],
-      ),
-    );
-  }
-}
-
-class _SignaturePainter extends CustomPainter {
-  final List<Offset?> points;
-  _SignaturePainter(this.points);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.ink
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round;
-    for (var i = 0; i < points.length - 1; i++) {
-      if (points[i] != null && points[i + 1] != null) {
-        canvas.drawLine(points[i]!, points[i + 1]!, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _SignaturePainter oldDelegate) => true;
 }

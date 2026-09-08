@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'router/app_router.dart';
 import 'state/app_state.dart';
@@ -8,27 +9,45 @@ void main() {
   runApp(const AlefApp());
 }
 
-class AlefApp extends StatelessWidget {
+class AlefApp extends StatefulWidget {
   const AlefApp({super.key});
 
   @override
+  State<AlefApp> createState() => _AlefAppState();
+}
+
+class _AlefAppState extends State<AlefApp> {
+  late final AppState _appState;
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _appState = AppState();
+    _router = buildAppRouter(_appState);
+    _appState.bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _router.dispose();
+    _appState.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppState()..bootstrap(),
-      child: Builder(
-        builder: (context) {
-          final router = buildAppRouter(context.watch<AppState>());
-          return MaterialApp.router(
-            title: 'ألف المستقبل',
-            debugShowCheckedModeBanner: false,
-            theme: buildAppTheme(),
-            routerConfig: router,
-            builder: (context, child) {
-              return Directionality(
-                textDirection: TextDirection.rtl,
-                child: _ResponsiveScaler(child: child ?? const SizedBox.shrink()),
-              );
-            },
+    return ChangeNotifierProvider.value(
+      value: _appState,
+      child: MaterialApp.router(
+        title: 'ألف المستقبل',
+        debugShowCheckedModeBanner: false,
+        theme: buildAppTheme(),
+        routerConfig: _router,
+        builder: (context, child) {
+          return Directionality(
+            textDirection: TextDirection.rtl,
+            child: _ResponsiveScaler(child: child ?? const SizedBox.shrink()),
           );
         },
       ),

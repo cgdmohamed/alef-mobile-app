@@ -22,8 +22,9 @@ const _navItems = [
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final bool isParent;
 
-  const AppBottomNav({super.key, required this.currentIndex, required this.onTap});
+  const AppBottomNav({super.key, required this.currentIndex, required this.onTap, this.isParent = false});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +38,7 @@ class AppBottomNav extends StatelessWidget {
         top: false,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(_navItems.length, (i) {
+          children: (isParent ? const [0, 2, 4] : const [0, 1, 2, 3, 4]).map((i) {
             final item = _navItems[i];
             final active = i == currentIndex;
             final color = active ? AppColors.primary : AppColors.textDisabled;
@@ -56,7 +57,7 @@ class AppBottomNav extends StatelessWidget {
                 ],
               ),
             );
-          }),
+          }).toList(),
         ),
       ),
     );

@@ -1,17 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Backend base URL. Android emulators can't reach the host machine via
-/// `localhost` — use `10.0.2.2` there instead. iOS simulator and desktop/web
-/// builds can keep `localhost`.
-const String kApiBaseUrl = String.fromEnvironment(
+/// Production is the safe default. Local development can override it with
+/// `--dart-define=API_BASE_URL=http://10.0.2.2:3000` on Android emulators.
+const String _configuredApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://localhost:3000',
+  defaultValue: 'https://api.aliffuture.com',
 );
+String get kApiBaseUrl => _configuredApiBaseUrl.endsWith('/')
+    ? _configuredApiBaseUrl.substring(0, _configuredApiBaseUrl.length - 1)
+    : _configuredApiBaseUrl;
 
 const _accessTokenKey = 'alef_access_token';
 const _refreshTokenKey = 'alef_refresh_token';
+const _requestTimeout = Duration(seconds: 20);
 
 class ApiException implements Exception {
   final int status;
@@ -26,19 +30,48 @@ class ApiClient {
   ApiClient._();
   static final ApiClient instance = ApiClient._();
 
-  Future<String?> get accessToken async =>
-      (await SharedPreferences.getInstance()).getString(_accessTokenKey);
+  static const _storage = FlutterSecureStorage();
+  Future<bool>? _refreshInFlight;
 
-  Future<String?> get refreshToken async =>
-      (await SharedPreferences.getInstance()).getString(_refreshTokenKey);
+  Future<String?> _readToken(String key) async {
+    String? secured;
+    try {
+      secured = await _storage.read(key: key);
+    } catch (_) {
+      // Some test/desktop environments don't register the secure-storage plugin.
+    }
+    if (secured != null) return secured;
+    final prefs = await SharedPreferences.getInstance();
+    final legacy = prefs.getString(key);
+    if (legacy != null) {
+      try {
+        await _storage.write(key: key, value: legacy);
+        await prefs.remove(key);
+      } catch (_) {
+        // Keep the legacy value until secure storage is available.
+      }
+    }
+    return legacy;
+  }
+
+  Future<String?> get accessToken => _readToken(_accessTokenKey);
+  Future<String?> get refreshToken => _readToken(_refreshTokenKey);
 
   Future<void> setTokens({required String accessToken, required String refreshToken}) async {
+    await Future.wait([
+      _storage.write(key: _accessTokenKey, value: accessToken),
+      _storage.write(key: _refreshTokenKey, value: refreshToken),
+    ]);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_accessTokenKey, accessToken);
-    await prefs.setString(_refreshTokenKey, refreshToken);
+    await prefs.remove(_accessTokenKey);
+    await prefs.remove(_refreshTokenKey);
   }
 
   Future<void> clearTokens() async {
+    await Future.wait([
+      _storage.delete(key: _accessTokenKey),
+      _storage.delete(key: _refreshTokenKey),
+    ]);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
     await prefs.remove(_refreshTokenKey);
@@ -56,14 +89,14 @@ class ApiClient {
     return 'Request failed (${res.statusCode})';
   }
 
-  Future<bool> _tryRefresh() async {
+  Future<bool> _performRefresh() async {
     final refresh = await refreshToken;
     if (refresh == null) return false;
     final res = await http.post(
       Uri.parse('$kApiBaseUrl/auth/refresh'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'refreshToken': refresh}),
-    );
+    ).timeout(_requestTimeout);
     if (res.statusCode != 200) {
       await clearTokens();
       return false;
@@ -71,6 +104,14 @@ class ApiClient {
     final data = jsonDecode(res.body);
     await setTokens(accessToken: data['accessToken'], refreshToken: data['refreshToken']);
     return true;
+  }
+
+  Future<bool> _tryRefresh() {
+    final running = _refreshInFlight;
+    if (running != null) return running;
+    final refresh = _performRefresh();
+    _refreshInFlight = refresh;
+    return refresh.whenComplete(() => _refreshInFlight = null);
   }
 
   Future<dynamic> _request(
@@ -89,16 +130,16 @@ class ApiClient {
     late http.Response res;
     switch (method) {
       case 'GET':
-        res = await http.get(uri, headers: headers);
+        res = await http.get(uri, headers: headers).timeout(_requestTimeout);
         break;
       case 'POST':
-        res = await http.post(uri, headers: headers, body: body != null ? jsonEncode(body) : null);
+        res = await http.post(uri, headers: headers, body: body != null ? jsonEncode(body) : null).timeout(_requestTimeout);
         break;
       case 'PATCH':
-        res = await http.patch(uri, headers: headers, body: body != null ? jsonEncode(body) : null);
+        res = await http.patch(uri, headers: headers, body: body != null ? jsonEncode(body) : null).timeout(_requestTimeout);
         break;
       case 'DELETE':
-        res = await http.delete(uri, headers: headers);
+        res = await http.delete(uri, headers: headers).timeout(_requestTimeout);
         break;
     }
 

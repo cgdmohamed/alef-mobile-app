@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:no_screenshot/overlay_mode.dart';
 import 'package:no_screenshot/secure_widget.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../services/meetings_api.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text.dart';
@@ -47,10 +48,16 @@ class _LiveMeetingScreenState extends State<LiveMeetingScreen> {
   }
 
   Future<void> _connect() async {
+    RtcEngine? pendingEngine;
     try {
+      final permissions = await [Permission.camera, Permission.microphone].request();
+      if (permissions.values.any((status) => !status.isGranted)) {
+        throw StateError('Camera and microphone permissions are required');
+      }
       final creds = await MeetingsApi.instance.join(widget.meetingId);
 
       final engine = createAgoraRtcEngine();
+      pendingEngine = engine;
       await engine.initialize(RtcEngineContext(appId: creds.appId));
 
       engine.registerEventHandler(RtcEngineEventHandler(
@@ -96,6 +103,7 @@ class _LiveMeetingScreenState extends State<LiveMeetingScreen> {
         _channelName = creds.channelName;
       });
     } catch (_) {
+      await pendingEngine?.release();
       if (!mounted) return;
       setState(() {
         _connecting = false;

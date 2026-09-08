@@ -22,12 +22,17 @@ class AppState extends ChangeNotifier {
 
   UserRole get role => currentUser?.role == 'parent' ? UserRole.parent : UserRole.student;
   bool get isAuthenticated => currentUser != null;
+  bool get isPendingConsent => currentUser?.role == 'student' && currentUser?.status == 'pending_consent';
 
   /// Called once at startup to restore a session from a stored token, if any.
   Future<void> bootstrap() async {
     authLoading = true;
     notifyListeners();
-    currentUser = await AuthApi.instance.me();
+    try {
+      currentUser = await AuthApi.instance.me();
+    } catch (_) {
+      currentUser = null;
+    }
     authLoading = false;
     notifyListeners();
   }
@@ -37,6 +42,11 @@ class AppState extends ChangeNotifier {
     currentUser = result.user;
     notifyListeners();
     return result.user;
+  }
+
+  Future<void> refreshCurrentUser() async {
+    currentUser = await AuthApi.instance.me();
+    notifyListeners();
   }
 
   Future<void> logout() async {

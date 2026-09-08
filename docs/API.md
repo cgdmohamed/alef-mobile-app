@@ -12,10 +12,9 @@ mobile-relevant subset, organized the way the app actually consumes it.
 
 ## Conventions
 
-**Base URL** — `API_BASE_URL` compile-time define, default `http://localhost:3000`.
-Android emulators must use `http://10.0.2.2:3000` instead of `localhost` to
-reach the host machine; iOS simulator and desktop/web builds can keep
-`localhost`.
+**Base URL** — `API_BASE_URL` compile-time define, default
+`https://api.aliffuture.com`. Android emulators reach a local host API through
+`http://10.0.2.2:3000`.
 
 **Auth header** — `Authorization: Bearer <accessToken>` on every request
 except `/auth/otp/request`, `/auth/otp/verify`, `/auth/signup`,
@@ -93,10 +92,17 @@ Public · limit **5/min**
 | `email` | string — becomes the OTP login identifier |
 | `phone` | string, E.164, optional — contact metadata only |
 | `role` | `"student"` \| `"parent"` |
+| `enrollmentCode` | school code; required for a mobile student signup |
+| `stage` | student stage |
+| `parentName` | required for a mobile student signup |
+| `parentEmail` | required for a mobile student signup |
+| `parentPhone` | parent phone in E.164 format, optional |
 
-→ `AuthUser`. A student signup starts as `status: "pending_consent"` — they
-can't log in via OTP until a parent completes consent below. **No tokens are
-returned** — this does not log the new account in.
+→ `AuthUser`. Student signup validates and consumes the school code in the
+same transaction, creates/links the roster row, and creates the active parent
+account if it does not already exist. The student starts as
+`status: "pending_consent"` and is kept on the waiting screen until approval.
+No tokens are returned by signup.
 
 ### `POST /auth/parent-consent`
 Roles: **parent** · limit **10/min**
@@ -167,13 +173,14 @@ Roles: **parent**
 →
 ```ts
 {
-  children: { id, name, average: number, points: number }[],
+  children: { id, userId, name, stage, average, points, consentPending }[],
   unreadNotifications: number
 }
 ```
 
-`children` is derived from `Student.parentUserId` (see `parent-consent`
-above) — empty until at least one child's consent flow has completed.
+`children` includes approved children and pending students whose registered
+parent email matches the signed-in parent. Pending entries provide the student
+User id required by `parent-consent`.
 
 ---
 
@@ -252,11 +259,9 @@ Roles: **student**
 |---|---|
 | `answerPayload` | arbitrary JSON object |
 
-The backend stores this as an opaque blob — there is **no server-side
-question bank or grading logic for quiz/puzzle content**. Quiz questions,
-essay prompts, and puzzle shapes are all local UI fixtures in the app; only
-the final answer payload and the submit action itself are real. A human
-teacher grades submissions later via the admin panel.
+The backend stores this as an opaque blob. The app loads assignment
+instructions from the linked content block and sends the student's written
+response. A human teacher grades submissions later via the admin panel.
 
 → `204`-style empty success (no meaningful body).
 
@@ -354,8 +359,7 @@ Any authenticated user
 Idempotent per user (returns the same open conversation on repeat calls).
 
 ### `GET /support/conversations/:id/messages`
-Any authenticated user (no ownership check server-side — don't leak another
-user's conversation id client-side)
+Any authenticated user; the API enforces participant/staff ownership.
 
 → array of `{ id, sender: { id }, text, createdAt }`.
 
@@ -384,13 +388,9 @@ school-roster `Student` row and sets their `User.schoolId` — the mechanism
 that turns a self-signup student into a fully functional roster-linked
 account (unlocking `/home/student`, real assignments, and reports).
 
-This requires an authenticated **student**, but the code is entered on the
-school-code screen *before* an account exists (signup step 1 of 2) — there's
-no public "preview this code" endpoint. So `EnrollmentApi.savePendingCode()`
-stashes it locally right after entry, and `otp_screen.dart` calls this
-endpoint automatically the first time that new account logs in via OTP
-(`EnrollmentApi.takePendingCode()` + `redeem()`), surfacing success/failure
-in a snackbar. A returning user with no pending code skips this entirely.
+This endpoint remains available for existing authenticated students. New
+mobile signups send `enrollmentCode` to `/auth/signup`, where validation,
+account creation, roster linking, and code consumption happen atomically.
 
 ---
 

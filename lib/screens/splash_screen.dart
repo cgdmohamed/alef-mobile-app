@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen> {
               left: 0,
               right: 0,
               child: Center(
-                child: Text('الإصدار 2.4.0', style: tj(11, color: const Color(0xFF7472B8))),
+                child: Text('الإصدار 1.0.0', style: tj(11, color: const Color(0xFF7472B8))),
               ),
             ),
           ],

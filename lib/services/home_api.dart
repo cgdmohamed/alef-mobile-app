@@ -26,17 +26,23 @@ class StudentHomeData {
 
 class ParentHomeChild {
   final String id;
+  final String? userId;
   final String name;
+  final String stage;
   final int average;
   final int points;
+  final bool consentPending;
 
-  ParentHomeChild({required this.id, required this.name, required this.average, required this.points});
+  ParentHomeChild({required this.id, required this.userId, required this.name, required this.stage, required this.average, required this.points, required this.consentPending});
 
   factory ParentHomeChild.fromJson(Map<String, dynamic> json) => ParentHomeChild(
         id: json['id'],
+        userId: json['userId'],
         name: json['name'],
+        stage: json['stage'] ?? '',
         average: json['average'] ?? 0,
         points: json['points'] ?? 0,
+        consentPending: json['consentPending'] ?? false,
       );
 }
 
@@ -57,8 +63,7 @@ class HomeApi {
   static final HomeApi instance = HomeApi._();
   final _client = ApiClient.instance;
 
-  /// Returns null if this account has no linked student roster record yet
-  /// (backend 404s — the roster/account link isn't wired up automatically).
+  /// Returns null if this account has no linked student roster record.
   Future<StudentHomeData?> studentHome() async {
     try {
       final data = await _client.get('/home/student');

@@ -19,10 +19,10 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _studentName = TextEditingController();
+  final _studentEmail = TextEditingController();
   final _phone = TextEditingController();
   final _parentName = TextEditingController();
   final _parentEmail = TextEditingController();
-  bool _mawhibaRegistered = false;
   bool _agreed = false;
   bool _submitting = false;
   String? _error;
@@ -41,6 +41,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   void dispose() {
     _studentName.dispose();
+    _studentEmail.dispose();
     _phone.dispose();
     _parentName.dispose();
     _parentEmail.dispose();
@@ -49,9 +50,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> _submit() async {
     if (!_agreed || _submitting) return;
-    final email = _parentEmail.text.trim();
-    if (email.isEmpty) {
-      setState(() => _error = 'يرجى إدخال بريد ولي الأمر');
+    final studentEmail = _studentEmail.text.trim();
+    final parentEmail = _parentEmail.text.trim();
+    final parentName = _parentName.text.trim();
+    if (_studentName.text.trim().isEmpty || studentEmail.isEmpty || parentName.isEmpty || parentEmail.isEmpty || _pendingCode == null) {
+      setState(() => _error = 'يرجى استكمال بيانات الطالب وولي الأمر');
+      return;
+    }
+    if (studentEmail.toLowerCase() == parentEmail.toLowerCase()) {
+      setState(() => _error = 'يجب أن يختلف بريد الطالب عن بريد ولي الأمر');
       return;
     }
     final phone = _phone.text.trim();
@@ -62,13 +69,18 @@ class _SignupScreenState extends State<SignupScreen> {
     try {
       await AuthApi.instance.signup(
         name: _studentName.text.trim(),
-        email: email,
-        phone: phone.isEmpty ? null : phone,
+        email: studentEmail,
         role: 'student',
+        enrollmentCode: _pendingCode,
+        stage: _stage,
+        parentName: parentName,
+        parentEmail: parentEmail,
+        parentPhone: phone.isEmpty ? null : phone,
       );
+      await EnrollmentApi.instance.clearPendingCode();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إنشاء الحساب، يرجى تسجيل الدخول ببريد ولي الأمر لإتمام موافقة ولي الأمر')),
+        const SnackBar(content: Text('تم إنشاء الحسابين. يدخل ولي الأمر ببريده أولًا لإتمام الموافقة')),
       );
       context.go('/login');
     } on ApiException catch (e) {
@@ -135,7 +147,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'كود المدرسة: $_pendingCode — سيتم التحقق منه عند تسجيل الدخول',
+                          'كود المدرسة: $_pendingCode — سيتم التحقق منه عند إنشاء الحساب',
                           style: tj(11, weight: FontWeight.w600, color: AppColors.ink),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -157,8 +169,19 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 12),
               AuthTextField(
+                label: 'البريد الإلكتروني للطالب',
+                controller: _studentEmail,
+                hint: 'student@email.com',
+                keyboardType: TextInputType.emailAddress,
+                labelSize: 11,
+                valueSize: 13,
+                radius: 11,
+              ),
+              const SizedBox(height: 12),
+              AuthTextField(
                 label: 'رقم جوال ولي الأمر (اختياري)',
                 controller: _phone,
+                hint: '+9665XXXXXXXX',
                 keyboardType: TextInputType.phone,
                 labelSize: 11,
                 valueSize: 13,
@@ -177,31 +200,13 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 12),
               AuthTextField(
-                label: 'بريد ولي الأمر (لتسجيل الدخول)',
+                label: 'بريد ولي الأمر (للموافقة)',
                 controller: _parentEmail,
                 hint: 'example@email.com',
                 keyboardType: TextInputType.emailAddress,
                 labelSize: 11,
                 valueSize: 13,
                 radius: 11,
-              ),
-              const SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.tint,
-                  border: Border.all(color: AppColors.tintBorder),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text('هل سبق التسجيل في مقياس موهبة؟', style: tj(12, color: AppColors.textBody)),
-                    ),
-                    AppSwitch(value: _mawhibaRegistered, onChanged: (v) => setState(() => _mawhibaRegistered = v)),
-                  ],
-                ),
               ),
               const SizedBox(height: 4),
               GestureDetector(

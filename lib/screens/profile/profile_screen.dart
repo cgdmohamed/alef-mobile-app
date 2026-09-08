@@ -13,6 +13,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppState>().currentUser;
+    final isParent = user?.role == 'parent';
     return Scaffold(
       backgroundColor: AppColors.screenBg,
       body: SafeArea(
@@ -54,8 +55,8 @@ class ProfileScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         _MenuRow(icon: IconBodies.gear, label: 'الإعدادات', onTap: () => context.push('/settings')),
-                        _MenuRow(icon: IconBodies.docLines, label: 'التقارير', onTap: () => context.go('/reports')),
-                        _MenuRow(icon: IconBodies.medal, label: 'الإنجازات', strokeWidth: 1.6, onTap: () => context.push('/achievements')),
+                        if (!isParent) _MenuRow(icon: IconBodies.docLines, label: 'التقارير', onTap: () => context.go('/reports')),
+                        if (!isParent) _MenuRow(icon: IconBodies.medal, label: 'الإنجازات', strokeWidth: 1.6, onTap: () => context.push('/achievements')),
                         _MenuRow(icon: IconBodies.chat, label: 'خدمة العملاء', onTap: () => context.push('/support')),
                         _MenuRow(
                           icon: IconBodies.logout,

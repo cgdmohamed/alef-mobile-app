@@ -7,6 +7,7 @@ class ApiAssignment {
   final DateTime dueAt;
   final String? submissionStatus; // in_progress | submitted | late | graded | null (not started)
   final int? grade;
+  final String? instructions;
 
   ApiAssignment({
     required this.id,
@@ -15,6 +16,7 @@ class ApiAssignment {
     required this.dueAt,
     required this.submissionStatus,
     required this.grade,
+    this.instructions,
   });
 
   factory ApiAssignment.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class ApiAssignment {
       dueAt: DateTime.parse(json['dueAt']),
       submissionStatus: submission?['status'],
       grade: submission?['grade'],
+      instructions: json['block']?['instructionsText'],
     );
   }
 }
@@ -56,6 +59,11 @@ class AssignmentsApi {
 
   Future<void> submit(String assignmentId, Map<String, dynamic> answerPayload) async {
     await _client.post('/assignments/$assignmentId/submit', {'answerPayload': answerPayload});
+  }
+
+  Future<ApiAssignment> detail(String assignmentId) async {
+    final data = await _client.get('/assignments/$assignmentId');
+    return ApiAssignment.fromJson(data['assignment']);
   }
 
   /// Returns null if the submission hasn't been graded yet (backend 404s).

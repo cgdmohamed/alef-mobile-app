@@ -93,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: 22),
-              OutlineButton(label: 'تواصل مع خدمة العملاء', onTap: () => context.push('/support')),
+              Text('يمكنك التواصل مع خدمة العملاء من داخل حسابك بعد تسجيل الدخول.', textAlign: TextAlign.center, style: tj(11, color: AppColors.textFaint)),
               const SizedBox(height: 24),
               GestureDetector(
                 onTap: () => context.push('/signup'),

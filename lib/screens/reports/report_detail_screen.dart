@@ -111,7 +111,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(child: Text(s['title']?.toString() ?? '', style: tj(11, color: AppColors.textBody))),
+                              Expanded(child: Text((s['assignment']?['title'] ?? 'واجب').toString(), style: tj(11, color: AppColors.textBody))),
                               if (s['grade'] != null) Text('${s['grade']}%', style: tj(11, weight: FontWeight.w700, color: AppColors.primary)),
                             ],
                           ),
@@ -129,8 +129,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(child: Text(a['title']?.toString() ?? '', style: tj(11, color: AppColors.textBody))),
-                              Text(a['status']?.toString() ?? '', style: tj(11, color: AppColors.textFaint)),
+                              Expanded(child: Text((a['meeting']?['title'] ?? 'لقاء').toString(), style: tj(11, color: AppColors.textBody))),
+                              Text(a['status'] == 'present' ? 'حاضر' : 'غائب', style: tj(11, color: AppColors.textFaint)),
                             ],
                           ),
                         ),
