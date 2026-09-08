@@ -7,7 +7,6 @@ const _pendingCodeKey = 'alef_pending_enrollment_code';
 class EnrollmentApi {
   EnrollmentApi._();
   static final EnrollmentApi instance = EnrollmentApi._();
-  final _client = ApiClient.instance;
 
   Future<void> savePendingCode(String code) async {
     final prefs = await SharedPreferences.getInstance();
