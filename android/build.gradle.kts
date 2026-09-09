@@ -17,6 +17,15 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+
+    // Some Flutter plugins still declare an old compile SDK even though their
+    // current AndroidX dependencies require API 35+. Keep every Android library
+    // module aligned with the SDK used by this app.
+    pluginManager.withPlugin("com.android.library") {
+        extensions.configure<com.android.build.api.dsl.LibraryExtension> {
+            compileSdk = 36
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {
