@@ -33,6 +33,16 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Node / backend
+node_modules/
+.turbo/
+dist/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+apps/api/generated/
+
 # Symbolication related
 app.*.symbols
 
