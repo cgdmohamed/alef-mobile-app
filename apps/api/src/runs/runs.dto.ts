@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsInt, IsOptional, IsString, IsUUID, Min, MinLength, ValidateNested } from 'class-validator';
+import { IsArray, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Min, MinLength, ValidateNested } from 'class-validator';
+import { RunStatus } from '@prisma/client';
 
 export class CreateRunDto {
   @IsUUID() programVersionId!: string;
@@ -25,3 +26,4 @@ export class SessionDto {
 export class ScheduleSessionsDto {
   @IsArray() @ValidateNested({ each: true }) @Type(() => SessionDto) sessions!: SessionDto[];
 }
+export class RunStatusDto { @IsEnum(RunStatus) status!: RunStatus; }

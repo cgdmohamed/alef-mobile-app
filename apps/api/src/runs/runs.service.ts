@@ -3,15 +3,17 @@ import { ProgramVersionStatus } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { Principal } from '../common/principal';
 import { TenantAccessService } from '../common/tenant-access.service';
+import { EntitlementsService } from '../common/entitlements.service';
 import { PrismaService } from '../database/prisma.service';
-import { CreateRunDto, EnrollStudentsDto, ScheduleSessionsDto } from './runs.dto';
+import { CreateRunDto, EnrollStudentsDto, RunStatusDto, ScheduleSessionsDto } from './runs.dto';
 
 @Injectable()
 export class RunsService {
-  constructor(private readonly prisma: PrismaService, private readonly access: TenantAccessService, private readonly audit: AuditService) {}
+  constructor(private readonly prisma: PrismaService, private readonly access: TenantAccessService, private readonly audit: AuditService, private readonly entitlements: EntitlementsService) {}
 
   async create(schoolId: string, dto: CreateRunDto, principal: Principal) {
     this.access.assertSchool(principal, schoolId);
+    await this.entitlements.limit(schoolId, 'max_active_programs');
     const startsAt = new Date(dto.startsAt); const endsAt = new Date(dto.endsAt);
     if (startsAt >= endsAt) throw new BadRequestException('Run end must be after start');
     const version = await this.prisma.programVersion.findFirst({ where: { id: dto.programVersionId, status: ProgramVersionStatus.PUBLISHED } });
@@ -53,4 +55,5 @@ export class RunsService {
     await this.prisma.learningSession.createMany({ data: sessions.map(({ title, start, end }) => ({ schoolId, runId, title, scheduledStart: start, scheduledEnd: end })) });
     return this.prisma.learningSession.findMany({ where: { schoolId, runId }, orderBy: { scheduledStart: 'asc' } });
   }
+  async transition(schoolId: string, runId: string, dto: RunStatusDto, principal: Principal) { this.access.assertSchool(principal, schoolId); const run = await this.prisma.programRun.findFirst({ where: { id: runId, schoolId } }); if (!run) throw new NotFoundException('Program run not found'); const allowed: Record<string, string[]> = { DRAFT: ['SCHEDULED', 'CANCELLED'], SCHEDULED: ['ACTIVE', 'CANCELLED'], ACTIVE: ['COMPLETED', 'CANCELLED'] }; if (!allowed[run.status]?.includes(dto.status)) throw new BadRequestException(`Invalid run transition from ${run.status} to ${dto.status}`); if (dto.status === 'SCHEDULED' || dto.status === 'ACTIVE') await this.entitlements.assertActiveProgramCapacity(schoolId, runId); return this.prisma.$transaction(async (tx) => { const updated = await tx.programRun.update({ where: { id: runId }, data: { status: dto.status } }); await tx.auditLog.create({ data: { schoolId, actorUserId: principal.sub, action: 'PROGRAM_RUN_STATUS_CHANGED', entityType: 'ProgramRun', entityId: runId, before: { status: run.status }, after: { status: dto.status } } }); return updated; }); }
 }

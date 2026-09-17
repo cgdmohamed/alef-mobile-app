@@ -1,0 +1,8 @@
+import { ContentStatus, NotificationChannel } from '@prisma/client'; import { IsArray, IsEnum, IsInt, IsObject, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
+export class CreateMediaDto { @IsString() fileName!: string; @IsString() mimeType!: string; @IsInt() @Min(0) sizeBytes!: number; @IsString() checksum!: string; }
+export class CmsPageDto { @IsString() slug!: string; @IsString() @MinLength(1) title!: string; @IsArray() sections!: unknown[]; @IsOptional() @IsObject() seo?: Record<string, unknown>; @IsOptional() @IsEnum(ContentStatus) status?: ContentStatus; }
+export class BlogDto { @IsString() slug!: string; @IsString() title!: string; @IsOptional() @IsString() excerpt?: string; @IsObject() content!: Record<string, unknown>; @IsOptional() @IsString() category?: string; @IsOptional() @IsObject() seo?: Record<string, unknown>; @IsOptional() @IsEnum(ContentStatus) status?: ContentStatus; }
+export class TemplateDto { @IsString() key!: string; @IsEnum(NotificationChannel) channel!: NotificationChannel; @IsOptional() @IsString() subject?: string; @IsString() body!: string; @IsOptional() @IsObject() variables?: Record<string, unknown>; }
+export class DeviceTokenDto { @IsString() token!: string; @IsString() platform!: string; @IsOptional() @IsString() deviceId?: string; }
+export class ReportRequestDto { @IsUUID() studentId!: string; @IsUUID() runId!: string; @IsOptional() @IsString() type?: string; }
+export class DispatchNotificationDto { @IsString() templateKey!: string; @IsOptional() @IsUUID() userId?: string; @IsOptional() @IsUUID() studentId?: string; @IsOptional() @IsUUID() schoolId?: string; @IsObject() variables!: Record<string, string>; }

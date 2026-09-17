@@ -6,7 +6,7 @@ describe('TenantAccessService', () => {
   const access = new TenantAccessService();
 
   it('rejects a school user accessing another school', () => {
-    expect(() => access.assertSchool({ kind: 'staff', sub: 'user-1', sessionId: 'session-1', roles: [{ role: StaffRole.SCHOOL_ADMIN, schoolId: 'school-a' }] }, 'school-b')).toThrow(ForbiddenException);
+    expect(() => access.assertSchool({ kind: 'staff', sub: 'user-1', sessionId: 'session-1', roles: [{ id: 'm1', role: StaffRole.SCHOOL_ADMIN, schoolId: 'school-a' }] }, 'school-b')).toThrow(ForbiddenException);
   });
 
   it('allows only the owning school for students', () => {
@@ -15,6 +15,6 @@ describe('TenantAccessService', () => {
   });
 
   it('allows global Alif administrators', () => {
-    expect(() => access.assertSchool({ kind: 'staff', sub: 'admin-1', sessionId: 'session-1', roles: [{ role: StaffRole.ALIF_SUPER_ADMIN, schoolId: null }] }, 'school-b')).not.toThrow();
+    expect(() => access.assertSchool({ kind: 'staff', sub: 'admin-1', sessionId: 'session-1', roles: [{ id: 'm1', role: StaffRole.ALIF_SUPER_ADMIN, schoolId: null }] }, 'school-b')).not.toThrow();
   });
 });

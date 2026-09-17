@@ -63,7 +63,7 @@ export class AuthService {
       kind: 'staff',
       sub: user.id,
       sessionId: session.id,
-      roles: user.memberships.map(({ role, schoolId }) => ({ role, schoolId })),
+      roles: user.memberships.map(({ id, role, schoolId }) => ({ id, role, schoolId })),
     };
     await this.audit.write({ actorUserId: user.id, action: 'AUTH_LOGIN', entityType: 'User', entityId: user.id });
     return { accessToken: await this.accessToken(principal), refreshToken, user: { id: user.id, name: user.name, email: user.email, roles: principal.roles } };
@@ -105,7 +105,7 @@ export class AuthService {
         if (revoked.count !== 1) throw new UnauthorizedException('Refresh token was already used');
         const next = await tx.refreshSession.create({ data: { userId: current.userId, tokenHash: this.digest(replacement), familyId: current.familyId, expiresAt } });
         await tx.refreshSession.update({ where: { id: current.id }, data: { replacedById: next.id } });
-        const principal: StaffPrincipal = { kind: 'staff', sub: current.userId, sessionId: next.id, roles: current.user.memberships.map(({ role, schoolId }) => ({ role, schoolId })) };
+        const principal: StaffPrincipal = { kind: 'staff', sub: current.userId, sessionId: next.id, roles: current.user.memberships.map(({ id, role, schoolId }) => ({ id, role, schoolId })) };
         return { accessToken: await this.accessToken(principal), refreshToken: replacement };
       });
     }

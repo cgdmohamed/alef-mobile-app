@@ -16,6 +16,16 @@ NestJS modular-monolith API for the Alif Future Learning Platform.
 - Scoped school-role authorization that prevents cross-school privilege composition.
 - Plans, entitlements, subscriptions, invoices, transactional payment reconciliation, CRM lead capture, activities, and won-lead conversion.
 - Persistence primitives for media, imports, durable jobs, activity submissions, breakout rooms, provider webhooks, notification delivery, push devices, report delivery, and CMS navigation.
+- School/run-scoped add-only program extensions with version and anchor validation.
+- Assigned-run session access, lifecycle transitions, enrolled-student attendance events, attendance calculation and audited overrides.
+- Immutable trainer-student chat, trainer assessments/observations, and breakout room lifecycle operations.
+- Agora AccessToken2 join credentials with trainer publishing and explicit student audio grants/breakout privileges; student video remains denied by API capability output.
+- S3-compatible signed private upload/playback URLs and recording view tracking.
+- XLSX student import validation, persisted row errors, partial valid-row import, and generated child access codes.
+- CMS pages/blog public APIs, notification templates/inbox/device registration, queued deterministic report requests, audit search, and durable job inspection.
+- Staff user and school-membership administration with immediate session revocation.
+- Durable report/session-summary workers, guardian email delivery, Agora Cloud Recording workers, recording retention cleanup, and FCM/email notification dispatch.
+- Activity submission/grading, subscription entitlement enforcement, and explicit program-run state transitions.
 
 ## Environment
 

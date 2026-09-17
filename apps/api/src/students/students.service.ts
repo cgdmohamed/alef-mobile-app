@@ -6,6 +6,7 @@ import { createHmac, randomInt } from 'node:crypto';
 import { AuditService } from '../audit/audit.service';
 import { Principal } from '../common/principal';
 import { TenantAccessService } from '../common/tenant-access.service';
+import { EntitlementsService } from '../common/entitlements.service';
 import { PrismaService } from '../database/prisma.service';
 import { CreateStudentDto } from './students.dto';
 
@@ -13,7 +14,7 @@ const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prisma: PrismaService, private readonly access: TenantAccessService, private readonly config: ConfigService, private readonly audit: AuditService) {}
+  constructor(private readonly prisma: PrismaService, private readonly access: TenantAccessService, private readonly config: ConfigService, private readonly audit: AuditService, private readonly entitlements: EntitlementsService) {}
 
   private lookup(schoolId: string, code: string): string {
     return createHmac('sha256', this.config.getOrThrow<string>('STUDENT_CODE_PEPPER')).update(`${schoolId}:${code}`).digest('hex');
@@ -25,6 +26,7 @@ export class StudentsService {
 
   async create(schoolId: string, dto: CreateStudentDto, principal: Principal) {
     this.access.assertSchool(principal, schoolId);
+    await this.entitlements.assertStudentCapacity(schoolId, 1);
     if (dto.classId) {
       const schoolClass = await this.prisma.schoolClass.findFirst({ where: { id: dto.classId, schoolId, active: true } });
       if (!schoolClass) throw new NotFoundException('Class not found in this school');

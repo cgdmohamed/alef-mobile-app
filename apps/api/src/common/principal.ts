@@ -4,7 +4,7 @@ export type StaffPrincipal = {
   kind: 'staff';
   sub: string;
   sessionId: string;
-  roles: Array<{ role: StaffRole; schoolId: string | null }>;
+  roles: Array<{ id: string; role: StaffRole; schoolId: string | null }>;
 };
 
 export type StudentPrincipal = {

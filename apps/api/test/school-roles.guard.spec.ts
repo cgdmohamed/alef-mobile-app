@@ -15,12 +15,12 @@ describe('SchoolRolesGuard', () => {
   beforeEach(() => jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue([StaffRole.SCHOOL_ADMIN]));
 
   it('does not compose an admin role from another school', () => {
-    const user = { kind: 'staff', sub: 'u', sessionId: 's', roles: [{ role: StaffRole.SCHOOL_ADMIN, schoolId: 'school-a' }, { role: StaffRole.TALENT_SPECIALIST, schoolId: 'school-b' }] };
+    const user = { kind: 'staff', sub: 'u', sessionId: 's', roles: [{ id: 'm1', role: StaffRole.SCHOOL_ADMIN, schoolId: 'school-a' }, { id: 'm2', role: StaffRole.TALENT_SPECIALIST, schoolId: 'school-b' }] };
     expect(() => guard.canActivate(context(user))).toThrow(ForbiddenException);
   });
 
   it('accepts the required role in the requested school', () => {
-    const user = { kind: 'staff', sub: 'u', sessionId: 's', roles: [{ role: StaffRole.SCHOOL_ADMIN, schoolId: 'school-b' }] };
+    const user = { kind: 'staff', sub: 'u', sessionId: 's', roles: [{ id: 'm1', role: StaffRole.SCHOOL_ADMIN, schoolId: 'school-b' }] };
     expect(guard.canActivate(context(user))).toBe(true);
   });
 });

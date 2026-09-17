@@ -9,9 +9,9 @@ export class CommercialController {
   constructor(private readonly service: CommercialService) {}
   @Roles(StaffRole.ALIF_SUPER_ADMIN) @Post('plans') createPlan(@Body() dto: CreatePlanDto, @CurrentUser() user: Principal) { return this.service.createPlan(dto, user); }
   @Roles(StaffRole.ALIF_SUPER_ADMIN) @Get('plans') plans() { return this.service.plans(); }
-  @SchoolRoles(StaffRole.SCHOOL_ADMIN) @Post('schools/:schoolId/subscriptions') subscribe(@Param('schoolId') schoolId: string, @Body() dto: CreateSubscriptionDto, @CurrentUser() user: Principal) { return this.service.subscribe(schoolId, dto, user); }
-  @SchoolRoles(StaffRole.SCHOOL_ADMIN) @Post('schools/:schoolId/invoices') invoice(@Param('schoolId') schoolId: string, @Body() dto: CreateInvoiceDto, @CurrentUser() user: Principal) { return this.service.createInvoice(schoolId, dto, user); }
-  @SchoolRoles(StaffRole.SCHOOL_ADMIN) @Patch('schools/:schoolId/invoices/:invoiceId/status') issue(@Param('schoolId') schoolId: string, @Param('invoiceId') invoiceId: string, @Body() dto: IssueInvoiceDto, @CurrentUser() user: Principal) { return this.service.issue(schoolId, invoiceId, dto, user); }
-  @SchoolRoles(StaffRole.SCHOOL_ADMIN) @Post('schools/:schoolId/invoices/:invoiceId/payments') payment(@Param('schoolId') schoolId: string, @Param('invoiceId') invoiceId: string, @Body() dto: RecordPaymentDto, @CurrentUser() user: Principal) { return this.service.payment(schoolId, invoiceId, dto, user); }
+  @Roles(StaffRole.ALIF_SUPER_ADMIN) @Post('schools/:schoolId/subscriptions') subscribe(@Param('schoolId') schoolId: string, @Body() dto: CreateSubscriptionDto, @CurrentUser() user: Principal) { return this.service.subscribe(schoolId, dto, user); }
+  @Roles(StaffRole.ALIF_SUPER_ADMIN) @Post('schools/:schoolId/invoices') invoice(@Param('schoolId') schoolId: string, @Body() dto: CreateInvoiceDto, @CurrentUser() user: Principal) { return this.service.createInvoice(schoolId, dto, user); }
+  @Roles(StaffRole.ALIF_SUPER_ADMIN) @Patch('schools/:schoolId/invoices/:invoiceId/status') issue(@Param('schoolId') schoolId: string, @Param('invoiceId') invoiceId: string, @Body() dto: IssueInvoiceDto, @CurrentUser() user: Principal) { return this.service.issue(schoolId, invoiceId, dto, user); }
+  @Roles(StaffRole.ALIF_SUPER_ADMIN) @Post('schools/:schoolId/invoices/:invoiceId/payments') payment(@Param('schoolId') schoolId: string, @Param('invoiceId') invoiceId: string, @Body() dto: RecordPaymentDto, @CurrentUser() user: Principal) { return this.service.payment(schoolId, invoiceId, dto, user); }
   @SchoolRoles(StaffRole.SCHOOL_ADMIN) @Get('schools/:schoolId/invoices') invoices(@Param('schoolId') schoolId: string, @CurrentUser() user: Principal) { return this.service.invoices(schoolId, user); }
 }

@@ -1045,6 +1045,19 @@ model ActivitySubmission {
   @@index([schoolId, studentId, status])
 }
 
+model SessionAudioPermission {
+  id          String   @id @default(uuid()) @db.Uuid
+  schoolId    String   @db.Uuid
+  sessionId   String   @db.Uuid
+  studentId   String   @db.Uuid
+  allowed     Boolean  @default(false)
+  grantedById String?  @db.Uuid
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([sessionId, studentId])
+  @@index([schoolId, studentId])
+}
+
 model ProviderWebhookEvent {
   id          String    @id @default(uuid()) @db.Uuid
   provider    String    @db.VarChar(60)

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common/common.module';
@@ -18,11 +19,19 @@ import { SchoolsModule } from './schools/schools.module';
 import { StudentsModule } from './students/students.module';
 import { CommercialModule } from './commercial/commercial.module';
 import { CrmModule } from './crm/crm.module';
+import { ExtensionsModule } from './extensions/extensions.module';
+import { SessionsModule } from './sessions/sessions.module';
+import { ProvidersModule } from './providers/providers.module';
+import { PlatformModule } from './platform/platform.module';
+import { ImportsModule } from './imports/imports.module';
+import { StaffModule } from './staff/staff.module';
+import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validationSchema: envSchema, envFilePath: ['.env', 'apps/api/.env'] }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    ScheduleModule.forRoot(),
     BullModule.forRootAsync({ inject: [ConfigService], useFactory: (config: ConfigService) => ({ connection: { url: config.getOrThrow<string>('REDIS_URL') } }) }),
     DatabaseModule,
     CommonModule,
@@ -34,6 +43,13 @@ import { CrmModule } from './crm/crm.module';
     RunsModule,
     CommercialModule,
     CrmModule,
+    ExtensionsModule,
+    SessionsModule,
+    ProvidersModule,
+    PlatformModule,
+    ImportsModule,
+    StaffModule,
+    JobsModule,
   ],
   controllers: [HealthController],
   providers: [
