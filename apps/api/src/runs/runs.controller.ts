@@ -3,13 +3,13 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { StaffRole } from '@prisma/client';
 import { CurrentUser } from '../common/current-user.decorator';
 import { Principal } from '../common/principal';
-import { Roles } from '../common/roles.decorator';
+import { SchoolRoles } from '../common/school-roles.decorator';
 import { CreateRunDto, EnrollStudentsDto, ScheduleSessionsDto } from './runs.dto';
 import { RunsService } from './runs.service';
 
 @ApiBearerAuth()
 @ApiTags('Program Runs')
-@Roles(StaffRole.ALIF_SUPER_ADMIN, StaffRole.SCHOOL_ADMIN, StaffRole.TALENT_SPECIALIST)
+@SchoolRoles(StaffRole.SCHOOL_ADMIN, StaffRole.TALENT_SPECIALIST)
 @Controller('schools/:schoolId/runs')
 export class RunsController {
   constructor(private readonly runs: RunsService) {}

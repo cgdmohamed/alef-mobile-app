@@ -16,11 +16,15 @@ export class AuthGuard implements CanActivate {
     if (type !== 'Bearer' || !token) throw new UnauthorizedException('Authentication required');
     try {
       const principal = await this.jwt.verifyAsync<Principal>(token);
-      const active = principal.kind === 'staff'
-        ? await this.prisma.refreshSession.findFirst({ where: { id: principal.sessionId, userId: principal.sub, revokedAt: null, expiresAt: { gt: new Date() }, user: { status: 'ACTIVE' } }, select: { id: true } })
-        : await this.prisma.studentSession.findFirst({ where: { id: principal.sessionId, studentId: principal.sub, schoolId: principal.schoolId, revokedAt: null, expiresAt: { gt: new Date() }, student: { status: 'ACTIVE' } }, select: { id: true } });
-      if (!active) throw new UnauthorizedException('Session has been revoked');
-      request.user = principal;
+      if (principal.kind === 'staff') {
+        const active = await this.prisma.refreshSession.findFirst({ where: { id: principal.sessionId, userId: principal.sub, revokedAt: null, expiresAt: { gt: new Date() }, user: { status: 'ACTIVE' } }, select: { user: { select: { memberships: { select: { role: true, schoolId: true, school: { select: { status: true } } } } } } } });
+        if (!active) throw new UnauthorizedException('Session has been revoked');
+        request.user = { ...principal, roles: active.user.memberships.filter(({ schoolId, school }) => schoolId === null || school?.status === 'ACTIVE').map(({ role, schoolId }) => ({ role, schoolId })) };
+      } else {
+        const active = await this.prisma.studentSession.findFirst({ where: { id: principal.sessionId, studentId: principal.sub, schoolId: principal.schoolId, revokedAt: null, expiresAt: { gt: new Date() }, student: { status: 'ACTIVE', school: { status: 'ACTIVE' } } }, select: { id: true } });
+        if (!active) throw new UnauthorizedException('Session has been revoked');
+        request.user = principal;
+      }
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');

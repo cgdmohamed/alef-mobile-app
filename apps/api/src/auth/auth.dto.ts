@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, Length, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, Length, MinLength } from 'class-validator';
 
 export class StaffLoginDto {
   @IsEmail()
@@ -27,7 +27,7 @@ export class RefreshDto {
   @IsString()
   refreshToken!: string;
 
-  @IsString()
+  @IsIn(['staff', 'student'])
   kind!: 'staff' | 'student';
 }
 

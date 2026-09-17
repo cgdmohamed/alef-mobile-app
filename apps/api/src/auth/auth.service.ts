@@ -96,7 +96,11 @@ export class AuthService {
     if (kind === 'staff') {
       return this.prisma.$transaction(async (tx) => {
         const current = await tx.refreshSession.findUnique({ where: { tokenHash }, include: { user: { include: { memberships: true } } } });
-        if (!current || current.revokedAt || current.expiresAt <= new Date() || current.user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Invalid refresh token');
+        if (current?.revokedAt) {
+          await tx.refreshSession.updateMany({ where: { familyId: current.familyId, revokedAt: null }, data: { revokedAt: new Date() } });
+          throw new UnauthorizedException('Refresh token reuse detected');
+        }
+        if (!current || current.expiresAt <= new Date() || current.user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Invalid refresh token');
         const revoked = await tx.refreshSession.updateMany({ where: { id: current.id, revokedAt: null }, data: { revokedAt: new Date() } });
         if (revoked.count !== 1) throw new UnauthorizedException('Refresh token was already used');
         const next = await tx.refreshSession.create({ data: { userId: current.userId, tokenHash: this.digest(replacement), familyId: current.familyId, expiresAt } });

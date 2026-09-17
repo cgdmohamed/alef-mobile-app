@@ -175,6 +175,41 @@ enum ContentStatus {
   ARCHIVED
 }
 
+enum FileStatus {
+  PENDING
+  AVAILABLE
+  QUARANTINED
+  DELETED
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  GRADED
+  RETURNED
+}
+
+enum BreakoutStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+}
+
+enum DeliveryStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
 model User {
   id             String            @id @default(uuid()) @db.Uuid
   email          String?           @unique @db.VarChar(320)
@@ -239,6 +274,7 @@ model StaffMembership {
   schoolId  String?  @db.Uuid
   role      StaffRole
   canTrain  Boolean  @default(false)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   school    School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -254,6 +290,8 @@ model SchoolClass {
   grade        String         @db.VarChar(50)
   academicTerm String?        @db.VarChar(100)
   active       Boolean        @default(true)
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime       @updatedAt @db.Timestamptz(3)
   school       School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   students     ClassStudent[]
 
@@ -788,12 +826,16 @@ model StudentReport {
   studentId   String       @db.Uuid
   runId       String       @db.Uuid
   status      ReportStatus @default(PENDING)
+  type        String       @default("FINAL") @db.VarChar(40)
+  version     Int          @default(1)
   snapshot    Json?
   htmlKey     String?
   pdfKey      String?
   createdAt   DateTime     @default(now()) @db.Timestamptz(3)
+  completedAt DateTime?    @db.Timestamptz(3)
+  failureReason String?
 
-  @@unique([runId, studentId])
+  @@unique([runId, studentId, type, version])
   @@index([schoolId, status])
 }
 
@@ -872,4 +914,210 @@ model AuditLog {
   @@index([schoolId, createdAt])
   @@index([actorUserId, createdAt])
   @@index([entityType, entityId])
+}
+
+model MediaAsset {
+  id          String     @id @default(uuid()) @db.Uuid
+  schoolId    String?    @db.Uuid
+  storageKey  String     @unique
+  fileName    String     @db.VarChar(300)
+  mimeType    String     @db.VarChar(150)
+  sizeBytes   BigInt
+  checksum    String     @db.VarChar(128)
+  status      FileStatus @default(PENDING)
+  uploadedById String?   @db.Uuid
+  createdAt   DateTime   @default(now()) @db.Timestamptz(3)
+  deletedAt   DateTime?  @db.Timestamptz(3)
+
+  @@index([schoolId, status])
+}
+
+model ImportBatch {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String    @db.Uuid
+  type        String    @db.VarChar(60)
+  status      JobStatus @default(PENDING)
+  sourceAssetId String  @db.Uuid
+  requestedById String  @db.Uuid
+  totalRows   Int       @default(0)
+  validRows   Int       @default(0)
+  invalidRows Int       @default(0)
+  importedRows Int      @default(0)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  rows        ImportRow[]
+
+  @@index([schoolId, status, createdAt])
+}
+
+model ImportRow {
+  id        String      @id @default(uuid()) @db.Uuid
+  batchId   String      @db.Uuid
+  rowNumber Int
+  data      Json
+  errors    Json?
+  valid     Boolean
+  importedAt DateTime?  @db.Timestamptz(3)
+  batch     ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, rowNumber])
+}
+
+model BackgroundJob {
+  id             String    @id @default(uuid()) @db.Uuid
+  schoolId       String?   @db.Uuid
+  queue          String    @db.VarChar(80)
+  type           String    @db.VarChar(100)
+  idempotencyKey String    @unique @db.VarChar(200)
+  payload        Json
+  status         JobStatus @default(PENDING)
+  attempts       Int       @default(0)
+  availableAt    DateTime  @default(now()) @db.Timestamptz(3)
+  completedAt    DateTime? @db.Timestamptz(3)
+  failureReason  String?
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([queue, status, availableAt])
+  @@index([schoolId, status])
+}
+
+model RunStaffAssignment {
+  id           String   @id @default(uuid()) @db.Uuid
+  schoolId     String   @db.Uuid
+  runId        String   @db.Uuid
+  membershipId String   @db.Uuid
+  assignmentRole String @db.VarChar(40)
+  assignedById String   @db.Uuid
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([runId, membershipId, assignmentRole])
+  @@index([schoolId, membershipId, active])
+}
+
+model BreakoutRoom {
+  id          String         @id @default(uuid()) @db.Uuid
+  schoolId    String         @db.Uuid
+  sessionId   String         @db.Uuid
+  name        String         @db.VarChar(120)
+  providerRef String?
+  status      BreakoutStatus @default(DRAFT)
+  position    Int
+  startedAt   DateTime?      @db.Timestamptz(3)
+  endedAt     DateTime?      @db.Timestamptz(3)
+  members     BreakoutMembership[]
+
+  @@unique([sessionId, position])
+  @@index([schoolId, sessionId, status])
+}
+
+model BreakoutMembership {
+  id          String       @id @default(uuid()) @db.Uuid
+  schoolId    String       @db.Uuid
+  roomId      String       @db.Uuid
+  studentId   String       @db.Uuid
+  joinedAt    DateTime?    @db.Timestamptz(3)
+  leftAt      DateTime?    @db.Timestamptz(3)
+  room        BreakoutRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, studentId])
+  @@index([schoolId, studentId])
+}
+
+model ActivitySubmission {
+  id            String           @id @default(uuid()) @db.Uuid
+  schoolId      String           @db.Uuid
+  runId         String           @db.Uuid
+  sessionId     String?          @db.Uuid
+  programItemId String           @db.Uuid
+  studentId     String           @db.Uuid
+  status        SubmissionStatus @default(DRAFT)
+  response      Json?
+  attachmentAssetId String?      @db.Uuid
+  submittedAt   DateTime?        @db.Timestamptz(3)
+  gradedAt      DateTime?        @db.Timestamptz(3)
+  gradedById    String?          @db.Uuid
+  feedback      String?
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
+
+  @@unique([runId, programItemId, studentId])
+  @@index([schoolId, studentId, status])
+}
+
+model ProviderWebhookEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  provider    String    @db.VarChar(60)
+  externalId  String    @db.VarChar(200)
+  type        String    @db.VarChar(100)
+  payload     Json
+  status      JobStatus @default(PENDING)
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(3)
+  processedAt DateTime? @db.Timestamptz(3)
+  failureReason String?
+
+  @@unique([provider, externalId])
+  @@index([status, receivedAt])
+}
+
+model NotificationDelivery {
+  id            String         @id @default(uuid()) @db.Uuid
+  notificationId String        @db.Uuid
+  channel       NotificationChannel
+  destination   String        @db.VarChar(320)
+  status        DeliveryStatus @default(QUEUED)
+  provider      String?       @db.VarChar(60)
+  providerMessageId String?   @db.VarChar(200)
+  attempts      Int           @default(0)
+  nextAttemptAt DateTime?     @db.Timestamptz(3)
+  sentAt        DateTime?     @db.Timestamptz(3)
+  deliveredAt   DateTime?     @db.Timestamptz(3)
+  failureReason String?
+
+  @@index([status, nextAttemptAt])
+  @@index([notificationId])
+}
+
+model DevicePushToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  studentId String    @db.Uuid
+  schoolId  String    @db.Uuid
+  platform  String    @db.VarChar(30)
+  token     String    @unique
+  deviceId  String?   @db.VarChar(200)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+
+  @@index([schoolId, studentId, revokedAt])
+}
+
+model ReportDelivery {
+  id          String         @id @default(uuid()) @db.Uuid
+  reportId    String         @db.Uuid
+  guardianId  String         @db.Uuid
+  email       String         @db.VarChar(320)
+  status      DeliveryStatus @default(QUEUED)
+  sentAt      DateTime?      @db.Timestamptz(3)
+  failureReason String?
+
+  @@index([reportId, status])
+}
+
+model CmsNavigation {
+  id        String              @id @default(uuid()) @db.Uuid
+  key       String              @unique @db.VarChar(80)
+  name      String              @db.VarChar(120)
+  items     CmsNavigationItem[]
+  updatedAt DateTime            @updatedAt @db.Timestamptz(3)
+}
+
+model CmsNavigationItem {
+  id           String        @id @default(uuid()) @db.Uuid
+  navigationId String        @db.Uuid
+  label        String        @db.VarChar(120)
+  url          String        @db.VarChar(500)
+  position     Int
+  navigation   CmsNavigation @relation(fields: [navigationId], references: [id], onDelete: Cascade)
+
+  @@unique([navigationId, position])
 }

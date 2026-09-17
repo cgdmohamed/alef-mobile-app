@@ -13,6 +13,9 @@ NestJS modular-monolith API for the Alif Future Learning Platform.
 - Student/guardian creation, code regeneration, device logout on regeneration, disable/revocation, and scoped listing.
 - Master programs, immutable published versions, nested generic curriculum, and public marketing output.
 - Program runs, school-safe trainer assignment, student enrollment, and validated scheduling.
+- Scoped school-role authorization that prevents cross-school privilege composition.
+- Plans, entitlements, subscriptions, invoices, transactional payment reconciliation, CRM lead capture, activities, and won-lead conversion.
+- Persistence primitives for media, imports, durable jobs, activity submissions, breakout rooms, provider webhooks, notification delivery, push devices, report delivery, and CMS navigation.
 
 ## Environment
 
